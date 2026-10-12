@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0e17">
+    <title>Force One - Field Beacon</title>
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --card-bg: #111827;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #0284c7;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-tactical: #1e293b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, monospace; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding: 14px; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; }
+        .header { text-align: center; border-bottom: 2px solid var(--border-tactical); padding-bottom: 8px; margin-bottom: 12px; }
+        .header h1 { font-size: 1.1rem; letter-spacing: 2px; color: #38bdf8; text-transform: uppercase; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-tactical); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        .card-title { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; }
+        label { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; margin-bottom: 2px; text-transform: uppercase; }
+        select { width: 100%; background: #1e293b; color: #fff; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 0.9rem; outline: none; }
+        .status-box { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid var(--border-tactical); }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-red); display: inline-block; margin-right: 6px; }
+        .status-indicator.live { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.75rem; margin-top: 8px; }
+        .telemetry-item { background: #0f172a; padding: 6px 8px; border-radius: 4px; border: 1px solid #1e293b; }
+        .telemetry-item span { display: block; color: var(--text-muted); font-size: 0.65rem; }
+        .btn-toggle { width: 100%; padding: 14px; font-size: 0.95rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .btn-start { background: var(--accent-green); color: #000; }
+        .btn-stop { background: #475569; color: #fff; }
+        .btn-casualty { width: 100%; padding: 15px; font-size: 1rem; font-weight: 900; background: #991b1b; color: #fff; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1.5px; display: none; margin-bottom: 8px; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div>
+        <div class="header">
+            <h1>FORCE ONE BEACON</h1>
+            <p style="font-size: 0.7rem; color: var(--text-muted);">SITUATIONAL AWARENESS BEACON</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">1. Operational Call Sign</div>
+            <label for="groupSelect">Unit / Group</label>
+            <select id="groupSelect" onchange="handleGroupChange()">
+                <option value="">-- SELECT GROUP --</option>
+                <option value="Alfa">Alfa</option>
+                <option value="Bravo">Bravo</option>
+                <option value="Charlie">Charlie</option>
+                <option value="Delta">Delta</option>
+                <option value="SOT">SOT (Special Operations Team)</option>
+                <option value="Sniper">Sniper</option>
+                <option value="BD">BD (Bomb Disposal)</option>
+            </select>
+
+            <div id="hitContainer">
+                <label for="hitSelect">Hit Assignment</label>
+                <select id="hitSelect" disabled>
+                    <option value="">-- SELECT HIT --</option>
+                </select>
+            </div>
+
+            <div id="commandoContainer">
+                <label for="commandoSelect">Commando Position</label>
+                <select id="commandoSelect" disabled>
+                    <option value="">-- SELECT COMMANDO --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">2. Field Telemetry</div>
+            <div class="status-box">
+                <div>
+                    <span id="beaconLight" class="status-indicator"></span>
+                    <strong id="statusText" style="font-size: 0.8rem;">STANDBY</strong>
+                </div>
+                <span id="callsignBadge" style="color: #38bdf8; font-weight: bold; font-size: 0.8rem;">--</span>
+            </div>
+            <div class="telemetry-grid">
+                <div class="telemetry-item"><span>LATITUDE</span><strong id="dispLat">0.000000</strong></div>
+                <div class="telemetry-item"><span>LONGITUDE</span><strong id="dispLng">0.000000</strong></div>
+                <div class="telemetry-item"><span>GPS ACCURACY</span><strong id="dispAcc">-- m</strong></div>
+                <div class="telemetry-item"><span>HEADING</span><strong id="dispHeading">--°</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <button id="casualtyBtn" class="btn-casualty" onclick="triggerCasualty()">🚨 CASUALTY / DISTRESS (MIC ON)</button>
+        <button id="toggleBtn" class="btn-toggle btn-start" onclick="toggleTransmission()">START TRANSMISSION</button>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXJsxJDkSxiYFHRKWKjPVkWSDcnAXb4_g",
+            authDomain: "forceone-ops.firebaseapp.com",
+            databaseURL: "https://forceone-ops-default-rtdb.firebaseio.com",
+            projectId: "forceone-ops",
+            storageBucket: "forceone-ops.firebasestorage.app",
+            messagingSenderId: "1035569483131",
+            appId: "1:1035569483131:web:ca675d22897f344f2ac1de"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Needs Anonymous sign-in enabled in Firebase Console > Authentication.
+        const authReady = firebase.auth().signInAnonymously().catch((err) => {
+            console.error("Auth error:", err);
+            return null;
+        });
+
+        // Native (installed app) uses the background GPS plugin; a normal browser falls back to the web API.
+        const isNative = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+        const BackgroundGeolocation = isNative ? Capacitor.registerPlugin("BackgroundGeolocation") : null;
+
+        let isTransmitting = false;
+        let isCasualty = false;
+        let watchId = null;        // browser watch id
+        let nativeWatcherId = null; // native watcher id
+        let unitKey = null;
+        let wakeLock = null;
+        let localAudioStream = null;
+        let peerConnection = null;
+        let answerRef = null;
+        let candidatesRef = null;
+
+        // Add a TURN server here for restrictive networks:
+        // { urls: "turn:YOUR_TURN_HOST:3478", username: "USER", credential: "PASS" }
+        const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+        function setStatus(text) {
+            document.getElementById("statusText").innerText = text;
+        }
+
+        function handleGroupChange() {
+            const group = document.getElementById("groupSelect").value;
+            const hitSelect = document.getElementById("hitSelect");
+            const commandoSelect = document.getElementById("commandoSelect");
+            const hitCont = document.getElementById("hitContainer");
+            const commCont = document.getElementById("commandoContainer");
+
+            hitSelect.innerHTML = '<option value="">-- SELECT HIT --</option>';
+            commandoSelect.innerHTML = '<option value="">-- SELECT COMMANDO --</option>';
+            hitSelect.disabled = true;
+            commandoSelect.disabled = true;
+            hitCont.style.display = "block";
+            commCont.style.display = "block";
+
+            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(group)) {
+                hitSelect.disabled = false;
+                for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+                commandoSelect.disabled = false;
+                for (let i = 1; i <= 6; i++) commandoSelect.add(new Option(`Commando ${i}`, `Commando ${i}`));
+            } else if (group === "SOT") {
+                hitSelect.disabled = false;
+                for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+                commandoSelect.disabled = false;
+                for (let i = 1; i <= 6; i++) commandoSelect.add(new Option(`Commando ${i}`, `Commando ${i}`));
+            } else if (group === "Sniper") {
+                commCont.style.display = "none";
+                hitSelect.disabled = false;
+                ["India 1", "India 2", "India 3", "India 4"].forEach(s => hitSelect.add(new Option(s, s)));
+            } else if (group === "BD") {
+                commCont.style.display = "none";
+                hitSelect.disabled = false;
+                ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
+            }
+        }
+
+        function getFullCallSign() {
+            const group = document.getElementById("groupSelect").value;
+            const hit = document.getElementById("hitSelect").value;
+            const commando = document.getElementById("commandoSelect").value;
+            if (!group || !hit) return null;
+            if (["Alfa", "Bravo", "Charlie", "Delta", "SOT"].includes(group) && !commando) return null;
+            return (group === "Sniper" || group === "BD") ? `${group} - ${hit}` : `${group} - ${hit} - ${commando}`;
+        }
+
+        async function requestWakeLock() {
+            try {
+                if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen");
+            } catch (err) {
+                console.warn("Wake lock unavailable:", err);
+            }
+        }
+        function releaseWakeLock() {
+            if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+        }
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && isTransmitting && !isNative) requestWakeLock();
+        });
+
+        async function startLocation(callsign) {
+            if (isNative) {
+                nativeWatcherId = await BackgroundGeolocation.addWatcher(
+                    {
+                        backgroundTitle: "Force One Beacon",
+                        backgroundMessage: "Transmitting your position",
+                        requestPermissions: true,
+                        stale: false,
+                        distanceFilter: 0
+                    },
+                    (location, error) => {
+                        if (error) {
+                            if (error.code === "NOT_AUTHORIZED") {
+                                alert("Location permission is required. Open settings and set Location to 'Allow all the time'.");
+                                BackgroundGeolocation.openSettings();
+                            }
+                            setStatus("GPS ERROR");
+                            return;
+                        }
+                        onLocationSuccess({
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            accuracy: location.accuracy,
+                            heading: location.bearing
+                        }, callsign);
+                    }
+                );
+            } else {
+                if (!navigator.geolocation) throw new Error("GPS not supported on this device.");
+                watchId = navigator.geolocation.watchPosition(
+                    (pos) => onLocationSuccess(pos.coords, callsign),
+                    (err) => setStatus("GPS ERROR: " + err.message),
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+                requestWakeLock();
+            }
+        }
+
+        async function stopLocation() {
+            if (isNative) {
+                if (nativeWatcherId !== null) {
+                    try { await BackgroundGeolocation.removeWatcher({ id: nativeWatcherId }); } catch (e) {}
+                    nativeWatcherId = null;
+                }
+            } else {
+                if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+                releaseWakeLock();
+            }
+        }
+
+        async function toggleTransmission() {
+            if (isTransmitting) {
+                stopTransmission();
+                return;
+            }
+
+            const callsign = getFullCallSign();
+            if (!callsign) {
+                alert("Please select Unit, Hit, and Commando position first.");
+                return;
+            }
+
+            const user = await authReady;
+            if (!user) {
+                alert("Could not connect securely to the server. Check internet and try again.");
+                return;
+            }
+
+            unitKey = callsign.replace(/[.#$/\[\]]/g, "_");
+            const unitRef = database.ref(`commandos/${unitKey}`);
+
+            // Registered once: if the connection drops, mark offline and clear distress/audio.
+            unitRef.onDisconnect().update({ status: "OFFLINE", casualty: false, audioActive: false });
+            database.ref(`webrtc/${unitKey}`).onDisconnect().remove();
+
+            try {
+                await startLocation(callsign);
+            } catch (err) {
+                alert("Could not start GPS: " + err.message);
+                return;
+            }
+
+            document.getElementById("groupSelect").disabled = true;
+            document.getElementById("hitSelect").disabled = true;
+            document.getElementById("commandoSelect").disabled = true;
+
+            document.getElementById("toggleBtn").className = "btn-toggle btn-stop";
+            document.getElementById("toggleBtn").innerText = "STOP TRANSMISSION";
+            document.getElementById("beaconLight").classList.add("live");
+            setStatus("LIVE BEACON ACTIVE");
+            document.getElementById("callsignBadge").innerText = callsign;
+            document.getElementById("casualtyBtn").style.display = "block";
+            isTransmitting = true;
+        }
+
+        function onLocationSuccess(coords, callsign) {
+            if (!isTransmitting) return;
+            const { latitude, longitude, accuracy, heading } = coords;
+            const hasHeading = heading !== null && heading !== undefined && !isNaN(heading);
+
+            document.getElementById("dispLat").innerText = latitude.toFixed(6);
+            document.getElementById("dispLng").innerText = longitude.toFixed(6);
+            document.getElementById("dispAcc").innerText = `${accuracy.toFixed(1)} m`;
+            document.getElementById("dispHeading").innerText = hasHeading ? `${heading.toFixed(0)}°` : "N/A";
+            setStatus("LIVE BEACON ACTIVE");
+
+            database.ref(`commandos/${unitKey}`).update({
+                callsign: callsign,
+                group: document.getElementById("groupSelect").value,
+                hit: document.getElementById("hitSelect").value,
+                lat: latitude,
+                lng: longitude,
+                accuracy: accuracy,
+                heading: hasHeading ? heading : 0,
+                status: "ONLINE",
+                casualty: isCasualty,
+                audioActive: isCasualty,
+                lastUpdated: firebase.database.ServerValue.TIMESTAMP
+            }).catch((err) => {
+                setStatus("UPLOAD ERROR");
+                console.error("Upload error:", err);
+            });
+        }
+
+        function resetCasualtyButton() {
+            const casBtn = document.getElementById("casualtyBtn");
+            casBtn.style.background = "#991b1b";
+            casBtn.innerText = "🚨 CASUALTY / DISTRESS (MIC ON)";
+        }
+
+        async function triggerCasualty() {
+            if (!isTransmitting) return;
+            const casBtn = document.getElementById("casualtyBtn");
+
+            if (!isCasualty) {
+                try {
+                    localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                } catch (err) {
+                    console.error("Mic Access Error:", err);
+                    alert("Microphone access denied or unavailable. Allow mic permission and try again.");
+                    return;
+                }
+
+                isCasualty = true;
+                casBtn.style.background = "#7f1d1d";
+                casBtn.innerText = "CASUALTY TRANSMITTING (TAP TO CANCEL)";
+                database.ref(`commandos/${unitKey}`).update({ casualty: true, audioActive: true });
+
+                try {
+                    await startAudioBroadcast();
+                } catch (err) {
+                    console.error("Audio broadcast error:", err);
+                }
+            } else {
+                isCasualty = false;
+                resetCasualtyButton();
+                stopAudioBroadcast();
+                database.ref(`commandos/${unitKey}`).update({ casualty: false, audioActive: false });
+            }
+        }
+
+        async function startAudioBroadcast() {
+            await database.ref(`webrtc/${unitKey}`).remove();
+
+            peerConnection = new RTCPeerConnection(rtcConfig);
+            localAudioStream.getTracks().forEach(track => peerConnection.addTrack(track, localAudioStream));
+            const pc = peerConnection;
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    database.ref(`webrtc/${unitKey}/c_candidates`).push(event.candidate.toJSON());
+                }
+            };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await database.ref(`webrtc/${unitKey}/offer`).set({ sdp: offer.sdp, type: offer.type });
+
+            answerRef = database.ref(`webrtc/${unitKey}/answer`);
+            answerRef.on("value", async (snap) => {
+                const answer = snap.val();
+                if (answer && pc.signalingState === "have-local-offer") {
+                    try { await pc.setRemoteDescription(new RTCSessionDescription(answer)); }
+                    catch (err) { console.error("Answer error:", err); }
+                }
+            });
+
+            candidatesRef = database.ref(`webrtc/${unitKey}/m_candidates`);
+            candidatesRef.on("child_added", async (snap) => {
+                const candidate = snap.val();
+                if (candidate && pc.remoteDescription) {
+                    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+                    catch (err) { console.error("ICE candidate error:", err); }
+                }
+            });
+        }
+
+        function stopAudioBroadcast() {
+            if (answerRef) { answerRef.off(); answerRef = null; }
+            if (candidatesRef) { candidatesRef.off(); candidatesRef = null; }
+            if (localAudioStream) {
+                localAudioStream.getTracks().forEach(t => t.stop());
+                localAudioStream = null;
+            }
+            if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            if (unitKey) database.ref(`webrtc/${unitKey}`).remove();
+        }
+
+        async function stopTransmission() {
+            await stopLocation();
+            stopAudioBroadcast();
+
+            if (unitKey) {
+                const unitRef = database.ref(`commandos/${unitKey}`);
+                unitRef.update({ status: "OFFLINE", casualty: false, audioActive: false });
+                unitRef.onDisconnect().cancel();
+                database.ref(`webrtc/${unitKey}`).onDisconnect().cancel();
+            }
+
+            isTransmitting = false;
+            isCasualty = false;
+            resetCasualtyButton();
+
+            document.getElementById("groupSelect").disabled = false;
+            document.getElementById("hitSelect").disabled = false;
+            document.getElementById("commandoSelect").disabled = false;
+            document.getElementById("toggleBtn").className = "btn-toggle btn-start";
+            document.getElementById("toggleBtn").innerText = "START TRANSMISSION";
+            document.getElementById("beaconLight").classList.remove("live");
+            setStatus("STANDBY");
+            document.getElementById("casualtyBtn").style.display = "none";
+        }
+    </script>
+</body>
+</html>
