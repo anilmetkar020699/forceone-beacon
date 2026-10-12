@@ -1,0 +1,8 @@
+{
+  "appId": "com.forceone.beacon",
+  "appName": "Force One Beacon",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
