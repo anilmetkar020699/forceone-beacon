@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force One - Operation Commander C2</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg-c2: #0b0f19; --panel-bg: #111827; --border: #1e293b;
+            --accent-green: #10b981; --accent-blue: #38bdf8; --accent-red: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace; }
+        body { background: var(--bg-c2); color: #e2e8f0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        header { height: 52px; background: var(--panel-bg); border-bottom: 2px solid #334155; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; z-index: 1000; }
+        .op-title { font-weight: 900; font-size: 1rem; letter-spacing: 2px; color: var(--accent-blue); }
+        #casualtyNoticeBar { display: none; background: #7f1d1d; border-bottom: 1px solid #ef4444; color: #fee2e2; padding: 8px 16px; font-size: 0.85rem; font-weight: bold; justify-content: space-between; align-items: center; z-index: 2000; }
+        .workspace { flex: 1; display: flex; position: relative; }
+        #tacticalMap { flex: 1; height: 100%; background: #000; }
+        .sidebar { width: 340px; background: var(--panel-bg); border-left: 2px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.85rem; color: #94a3b8; }
+        .unit-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .unit-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
+        .unit-card.casualty-state { border: 2px solid var(--accent-red); background: #260a0a; }
+        .btn-audio-listen { display: inline-block; margin-top: 6px; padding: 5px 10px; background: #dc2626; color: #fff; border: 1px solid #f87171; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-audio-listen.monitoring { background: #16a34a; border-color: #4ade80; }
+        #authOverlay { position: fixed; inset: 0; background: #0a0e17; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .auth-card { background: #111827; border: 1px solid #334155; padding: 30px; border-radius: 8px; width: 320px; text-align: center; }
+        .auth-card input { width: 100%; padding: 10px; margin: 15px 0; background: #1e293b; border: 1px solid #475569; color: #fff; text-align: center; }
+        .auth-card button { width: 100%; padding: 10px; background: var(--accent-blue); border: none; font-weight: bold; cursor: pointer; }
+        .commando-marker { display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 9px; font-weight: bold; color: #fff; border: 2px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.8); }
+        .marker-alfa, .marker-bravo, .marker-charlie, .marker-delta { background: #0284c7; }
+        .marker-sot { background: #d97706; }
+        .marker-sniper { background: #475569; }
+        .marker-bd { background: #7e22ce; }
+        .marker-casualty { background: #dc2626 !important; border: 2px solid #ffffff !important; outline: 3px solid #ef4444; }
+/* Applies dark tactical mode to Street Map */
+.street-tiles {
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3);
+}
+
+/* Styles the layer switcher box to match dark theme */
+.leaflet-control-layers {
+    background-color: #111827 !important;
+    color: #e2e8f0 !important;
+    border: 1px solid #1e293b !important;
+    border-radius: 6px !important;
+}
+
+    </style>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <audio id="remoteAudioPlayer" autoplay></audio>
+
+    <div id="authOverlay">
+        <div class="auth-card">
+            <h2 style="color: var(--accent-blue);">FORCE ONE C2</h2>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">SECURE OPS ACCESS</p>
+            <input type="password" id="c2Pin" placeholder="Enter Pin">
+            <button onclick="verifyAccess()">AUTHORIZE DASHBOARD</button>
+        </div>
+    </div>
+
+    <div id="casualtyNoticeBar">
+        <span id="casualtyNoticeText">SIGNAL: CASUALTY MARKED ON MAP</span>
+        <button id="focusCasualtyBtn" style="padding:4px 8px; background:#ef4444; color:#fff; border:none; cursor:pointer;">ZOOM TO POSITION</button>
+    </div>
+
+    <header>
+        <div class="op-title">🛡️ FORCE ONE TACTICAL C2</div>
+        <div style="font-size: 0.8rem;">
+            ONLINE: <span id="onlineCount" style="color: var(--accent-green); font-weight: bold;">0</span> | 
+            CASUALTY: <span id="casualtyCount" style="color: var(--accent-red); font-weight: bold;">0</span>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <div id="tacticalMap"></div>
+        <div class="sidebar">
+            <div class="sidebar-header">Operational Elements</div>
+            <div id="unitList" class="unit-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const C2_PIN = "Forceone@123";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXJsxJDkSxiYFHRKWKjPVkWSDcnAXb4_g",
+            authDomain: "forceone-ops.firebaseapp.com",
+            databaseURL: "https://forceone-ops-default-rtdb.firebaseio.com",
+            projectId: "forceone-ops",
+            storageBucket: "forceone-ops.firebasestorage.app",
+            messagingSenderId: "1035569483131",
+            appId: "1:1035569483131:web:ca675d22897f344f2ac1de"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let map, unitsData = {}, commandoMarkers = {};
+        let activeListeningKey = null;
+        let commanderPC = null;
+        const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+        function verifyAccess() {
+            if (document.getElementById("c2Pin").value === C2_PIN) {
+                document.getElementById("authOverlay").style.display = "none";
+                initMap();
+                listenToCommandos();
+            } else {
+                alert("ACCESS DENIED");
+            }
+        }
+
+        function initMap() {
+            map = L.map('tacticalMap').setView([19.0760, 72.8777], 13);
+            
+// Base Layer 1: Esri Satellite
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: 'Tiles &copy; Esri'
+});
+
+// Base Layer 2: OpenStreetMap
+const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors',
+    className: 'street-tiles'
+});
+
+// Set Satellite as default
+satelliteLayer.addTo(map);
+
+// Add the switcher menu
+const baseMaps = {
+    "Satellite": satelliteLayer,
+    "Street Map": streetLayer
+};
+L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+}
+
+        function listenToCommandos() {
+            database.ref('commandos').on('value', (snap) => {
+                unitsData = snap.val() || {};
+                updateDashboard();
+            });
+        }
+
+        function updateDashboard() {
+            let online = 0, casualties = 0;
+            let firstCasualtyUnit = null;
+
+            for (const [key, unit] of Object.entries(unitsData)) {
+                if (unit.status === "ONLINE") online++;
+                if (unit.casualty) {
+                    casualties++;
+                    if (!firstCasualtyUnit) firstCasualtyUnit = unit;
+                }
+
+                let markerClass = "marker-alfa";
+                if (unit.group === "SOT") markerClass = "marker-sot";
+                else if (unit.group === "Sniper") markerClass = "marker-sniper";
+                else if (unit.group === "BD") markerClass = "marker-bd";
+                if (unit.casualty) markerClass = "marker-casualty";
+
+                const isOnline = unit.status === "ONLINE";
+                const customIcon = L.divIcon({
+                    className: '',
+                    html: `<div class="commando-marker ${markerClass}" style="width:26px; height:26px; ${!isOnline ? 'filter:grayscale(1); opacity:0.4;' : ''}">${unit.casualty ? 'CAS' : unit.callsign.substring(0, 2)}</div>`,
+                    iconSize: [26, 26], iconAnchor: [13, 13]
+                });
+
+                if (commandoMarkers[key]) {
+                    commandoMarkers[key].setLatLng([unit.lat, unit.lng]);
+                    commandoMarkers[key].setIcon(customIcon);
+                    commandoMarkers[key].getPopup().setContent(buildPopup(unit));
+                } else {
+                    const marker = L.marker([unit.lat, unit.lng], { icon: customIcon }).addTo(map);
+                    marker.bindPopup(buildPopup(unit));
+                    commandoMarkers[key] = marker;
+                }
+            }
+
+            const noticeBar = document.getElementById("casualtyNoticeBar");
+            if (casualties > 0 && firstCasualtyUnit) {
+                noticeBar.style.display = "flex";
+                document.getElementById("casualtyNoticeText").innerText = `SIGNAL: ${firstCasualtyUnit.callsign} REPORTED CASUALTY`;
+                document.getElementById("focusCasualtyBtn").onclick = () => map.setView([firstCasualtyUnit.lat, firstCasualtyUnit.lng], 18);
+            } else {
+                noticeBar.style.display = "none";
+            }
+
+            document.getElementById("onlineCount").innerText = online;
+            document.getElementById("casualtyCount").innerText = casualties;
+            renderList();
+        }
+
+        function buildPopup(unit) {
+            return `
+                <div style="font-family:monospace; font-size:12px; color:#111;">
+                    <strong style="color:${unit.casualty ? '#dc2626' : '#0284c7'}; font-size:13px;">${unit.callsign}</strong><br>
+                    <strong>Status:</strong> ${unit.casualty ? '<span style="color:red; font-weight:bold;">CASUALTY</span>' : unit.status}<br>
+                    <strong>Coordinates:</strong> ${unit.lat.toFixed(5)}, ${unit.lng.toFixed(5)}<br>
+                    <strong>Accuracy:</strong> ±${unit.accuracy ? unit.accuracy.toFixed(1) : '--'}m
+                </div>
+            `;
+        }
+
+        async function toggleAudioMonitor(commandoKey) {
+            const audioPlayer = document.getElementById("remoteAudioPlayer");
+            if (activeListeningKey === commandoKey) {
+                stopAudioMonitoring();
+                renderList();
+                return;
+            }
+            if (commanderPC) stopAudioMonitoring();
+
+            activeListeningKey = commandoKey;
+            commanderPC = new RTCPeerConnection(rtcConfig);
+
+            commanderPC.ontrack = (event) => {
+                audioPlayer.srcObject = event.streams[0];
+                audioPlayer.play().catch(e => console.log("Playback error:", e));
+            };
+
+            commanderPC.onicecandidate = (event) => {
+                if (event.candidate) database.ref(`webrtc/${commandoKey}/m_candidates`).push(event.candidate.toJSON());
+            };
+
+            const offerSnap = await database.ref(`webrtc/${commandoKey}/offer`).once('value');
+            const offer = offerSnap.val();
+            if (!offer) {
+                alert("Audio stream connecting, tap again in 2 seconds...");
+                return;
+            }
+
+            await commanderPC.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await commanderPC.createAnswer();
+            await commanderPC.setLocalDescription(answer);
+
+            await database.ref(`webrtc/${commandoKey}/answer`).set({ sdp: answer.sdp, type: answer.type });
+
+            database.ref(`webrtc/${commandoKey}/c_candidates`).on('child_added', async (snap) => {
+                const cand = snap.val();
+                if (cand) await commanderPC.addIceCandidate(new RTCIceCandidate(cand));
+            });
+            renderList();
+        }
+
+        function stopAudioMonitoring() {
+            const audioPlayer = document.getElementById("remoteAudioPlayer");
+            if (audioPlayer.srcObject) {
+                audioPlayer.srcObject.getTracks().forEach(t => t.stop());
+                audioPlayer.srcObject = null;
+            }
+            if (commanderPC) {
+                commanderPC.close();
+                commanderPC = null;
+            }
+            activeListeningKey = null;
+        }
+
+        function renderList() {
+            const list = document.getElementById("unitList");
+            list.innerHTML = "";
+            for (const [key, unit] of Object.entries(unitsData)) {
+                const div = document.createElement("div");
+                div.className = `unit-card ${unit.casualty ? 'casualty-state' : ''}`;
+                
+                let audioBtnHtml = "";
+                if (unit.audioActive) {
+                    const isMonitoring = activeListeningKey === key;
+                    audioBtnHtml = `
+                        <button class="btn-audio-listen ${isMonitoring ? 'monitoring' : ''}" onclick="event.stopPropagation(); toggleAudioMonitor('${key}')">
+                            ${isMonitoring ? '⏹️ STOP LISTENING' : '🎧 INTERCEPT AUDIO (LIVE)'}
+                        </button>
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.85rem;">
+                        <span>${unit.callsign}</span>
+                        <span style="color:${unit.casualty ? '#ef4444' : (unit.status === 'ONLINE' ? '#10b981' : '#64748b')}">
+                            ${unit.casualty ? '● CASUALTY' : unit.status}
+                        </span>
+                    </div>
+                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">
+                        <span>Acc: ±${unit.accuracy ? unit.accuracy.toFixed(1) : '--'}m</span>
+                    </div>
+                    ${audioBtnHtml}
+                `;
+                div.onclick = () => map.setView([unit.lat, unit.lng], 18);
+                list.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>
