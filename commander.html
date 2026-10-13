@@ -1,831 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Force One - Tactical C2 Dashboard</title>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <style>
-        :root {
-            --bg-dark: #0a0e17;
-            --panel-bg: #111827;
-            --border: #1e293b;
-            --accent-green: #10b981;
-            --accent-blue: #38bdf8;
-            --accent-red: #ef4444;
-            --accent-yellow: #f59e0b;
-            --text-main: #e2e8f0;
-            --text-muted: #94a3b8;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FORCE ONE - Tactical Command</title>
+  <style>
+    :root {
+      --bg-dark: #0a0f18;
+      --card-bg: #111a28;
+      --accent-blue: #0088ff;
+      --alert-red: #ff3344;
+      --text-gold: #d4af37;
+      --text-light: #e0e8f0;
+    }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace, -apple-system, sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-light);
+    }
 
-        /* Security Authorization Overlay */
-        #authOverlay {
-            position: fixed; inset: 0; background: rgba(8, 12, 20, 0.98); 
-            z-index: 9999; display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(8px);
-        }
-        .auth-card {
-            background: #111827; border: 1px solid #334155; padding: 36px 30px; 
-            border-radius: 12px; width: 360px; text-align: center; 
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.15);
-        }
-        
-        /* Tactical Force One Logo Emblem */
-        .auth-logo-svg {
-            width: 84px; height: 84px; margin: 0 auto 10px auto; display: block;
-            filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.35));
-        }
-        .auth-welcome-title {
-            font-size: 1.85rem; font-weight: 900; letter-spacing: 3px; 
-            color: #ffffff; text-transform: uppercase; margin-top: 6px;
-        }
-        .auth-subtitle {
-            font-size: 0.72rem; font-weight: 700; letter-spacing: 2.5px; 
-            color: var(--accent-blue); text-transform: uppercase; margin-bottom: 22px;
-        }
+    /* ================= LOGIN SCREEN ================= */
+    #login-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #132035 0%, #06090e 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
 
-        .auth-card input {
-            width: 100%; padding: 12px 14px; margin-bottom: 16px; background: #0f172a; 
-            border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.95rem; text-align: center;
-            letter-spacing: 1px; outline: none; transition: 0.2s border;
-        }
-        .auth-card input:focus { border-color: var(--accent-blue); }
-        .auth-card button {
-            width: 100%; padding: 12px; background: var(--accent-blue); border: none; 
-            border-radius: 6px; font-weight: 900; font-size: 0.9rem; letter-spacing: 1.5px; 
-            cursor: pointer; color: #0a0e17; text-transform: uppercase; transition: 0.2s background;
-        }
-        .auth-card button:hover { background: #7dd3fc; }
+    .login-box {
+      background: rgba(17, 26, 40, 0.95);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.2);
+      border-radius: 8px;
+      padding: 30px 40px;
+      width: 340px;
+      text-align: center;
+    }
 
-        /* Header Operations Bar */
-        header { 
-            height: 54px; background: var(--panel-bg); border-bottom: 2px solid #334155; 
-            display: flex; justify-content: space-between; align-items: center; padding: 0 16px; z-index: 1000; 
-        }
-        .op-title { font-weight: 900; font-size: 1.05rem; letter-spacing: 2px; color: var(--accent-blue); }
-        .stat-badges { display: flex; gap: 14px; font-size: 0.8rem; font-weight: bold; }
-        .badge { padding: 4px 8px; border-radius: 4px; background: #0f172a; border: 1px solid var(--border); }
+    .f1-logo {
+      width: 140px;
+      height: auto;
+      margin-bottom: 12px;
+      filter: drop-shadow(0px 0px 8px rgba(212, 175, 55, 0.5));
+    }
 
-        /* Emergency Casualty Banner */
-        #casualtyNoticeBar { 
-            display: none; background: #7f1d1d; border-bottom: 2px solid var(--accent-red); 
-            color: #fff; padding: 8px 16px; font-size: 0.85rem; font-weight: bold; 
-            justify-content: space-between; align-items: center; z-index: 2000; 
-        }
+    .login-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #fff;
+      margin: 0;
+    }
 
-        /* Workspace Grid */
-        .workspace { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
-        #tacticalMap { flex: 1; height: 100%; width: 100%; background: #000; }
+    .login-motto {
+      font-size: 13px;
+      color: var(--text-gold);
+      margin: 4px 0 20px 0;
+      letter-spacing: 1px;
+    }
 
-        /* Collapsible Sidebar Roster */
-        .sidebar { 
-            width: 340px; 
-            background: var(--panel-bg); 
-            border-left: 2px solid var(--border); 
-            display: flex; 
-            flex-direction: column; 
-            transition: all 0.2s ease-in-out;
-        }
-        .sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: bold; color: var(--accent-blue); display: flex; justify-content: space-between; align-items: center; }
-        .unit-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .login-input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      background: #090e17;
+      border: 1px solid #203550;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 14px;
+    }
 
-        /* Commando Cards */
-        .unit-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; cursor: pointer; transition: 0.2s; }
-        .unit-card:hover { border-color: var(--accent-blue); }
-        .unit-card.casualty { border: 2px solid var(--accent-red); background: #3b0764; animation: pulseRed 1.5s infinite; }
-        .unit-card.stale { border-color: var(--accent-yellow); }
-        .unit-card.offline { opacity: 0.55; }
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      background: #a81c1c;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 1.5px;
+    }
 
-        @keyframes pulseRed {
-            0%, 100% { border-color: var(--accent-red); }
-            50% { border-color: #fca5a5; }
-        }
+    .login-btn:hover {
+      background: #cc2222;
+    }
 
-        /* Control Buttons */
-        .btn-listen { 
-            width: 100%; margin-top: 8px; padding: 6px; font-size: 0.75rem; font-weight: bold; 
-            border: none; border-radius: 4px; cursor: pointer; background: #dc2626; color: #fff; 
-        }
-        .btn-listen.monitoring { background: var(--accent-green); color: #000; }
+    /* ================= DASHBOARD HEADER CONTROLS ================= */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0d1522;
+      padding: 10px 20px;
+      border-bottom: 1px solid #1f2d42;
+    }
 
-        .btn-tool {
-            background: #1e293b; color: #fff; border: 1px solid var(--border); 
-            padding: 5px 9px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; margin-left: 3px;
-        }
-        .btn-tool.active { background: var(--accent-blue); color: #000; font-weight: bold; }
-        .btn-tool.btn-threat { border-color: #dc2626; color: #fca5a5; }
-        .btn-tool.btn-threat.active { background: #dc2626; color: #fff; font-weight: bold; }
-        .btn-tool.btn-ied { border-color: #d97706; color: #fde68a; }
-        .btn-tool.btn-ied.active { background: #d97706; color: #000; font-weight: bold; }
-        .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
+    .siren-toggle-btn {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid #444;
+      transition: all 0.2s ease;
+    }
 
-        /* Tactical Markers */
-        .commando-marker {
-            width: 28px; height: 28px; border-radius: 50%; display: flex; 
-            align-items: center; justify-content: center; font-size: 11px; 
-            font-weight: 900; color: #fff; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.8);
-            transition: all 0.3s ease;
-        }
-        .commando-marker.marker-casualty { 
-            background: var(--accent-red) !important; 
-            animation: pulseRed 1s infinite; 
-        }
-        .commando-marker.marker-offline {
-            background: #475569 !important;
-            border: 2px dashed #94a3b8 !important;
-            opacity: 0.65;
-            box-shadow: none;
-        }
+    .siren-enabled {
+      background: #1a522a;
+      color: #44ff77;
+      border-color: #27ae60;
+    }
 
-        .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
-    </style>
-
-    <!-- Leaflet & Firebase SDKs -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    .siren-disabled {
+      background: #4a1515;
+      color: #ff5555;
+      border-color: #c0392b;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- Remote Audio Player for Casualty Audio Intercept -->
-    <audio id="remoteAudioPlayer" autoplay></audio>
+  <!-- ================= 1. LOGIN OVERLAY WITH LOGO ================= -->
+  <div id="login-overlay">
+    <div class="login-box">
+      <img src="force_one_logo.png" alt="Force One" class="f1-logo">
+      <div class="login-title">FORCE ONE</div>
+      <div class="login-motto">यतः शौर्यं ततो जयः</div>
 
-    <!-- Security Authorization Screen with Force One Logo & Design -->
-    <div id="authOverlay">
-        <div class="auth-card">
-            <!-- Force One Tactical Insignia Logo SVG -->
-            <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Tactical Shield Base -->
-                <path d="M50 4L12 18V50C12 73.5 50 96 50 96C50 96 88 73.5 88 50V18L50 4Z" fill="#0f172a" stroke="#38bdf8" stroke-width="3" stroke-linejoin="round"/>
-                <!-- Inner Gold Border -->
-                <path d="M50 10L18 22V48C18 67 50 86 50 86C50 86 82 67 82 48V22L50 10Z" stroke="#f59e0b" stroke-width="1.8" stroke-linejoin="round"/>
-                <!-- Commando Dagger -->
-                <path d="M50 18V64" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
-                <path d="M43 27L50 18L57 27" fill="#ffffff"/>
-                <!-- Dagger Guard & Grip -->
-                <path d="M38 48H62" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-                <path d="M47 52H53M47 57H53M47 62H53" stroke="#94a3b8" stroke-width="2"/>
-                <circle cx="50" cy="68" r="3" fill="#f59e0b"/>
-                <!-- Wings / Lightning Flanks -->
-                <path d="M26 40L36 46L29 55L40 50" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M74 40L64 46L71 55L60 50" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                <!-- Tactical Star -->
-                <path d="M50 74L51.8 78.5L56.5 78.5L52.7 81.2L54.2 85.5L50 83L45.8 85.5L47.3 81.2L43.5 78.5L48.2 78.5L50 74Z" fill="#f59e0b"/>
-            </svg>
-
-            <!-- Large Welcome Text -->
-            <div class="auth-welcome-title">WELCOME</div>
-            <!-- Small Commando Tracking System Subtitle -->
-            <div class="auth-subtitle">COMMANDO TRACKING SYSTEM</div>
-
-            <!-- Password Input Field -->
-            <input type="password" id="c2Password" placeholder="Enter Password" onkeydown="if(event.key==='Enter') verifyAccess()">
-            
-            <!-- Login Button -->
-            <button onclick="verifyAccess()">LOGIN</button>
-        </div>
+      <input type="text" id="callsign" class="login-input" placeholder="OPERATOR CALLSIGN" value="COMMAND HQ">
+      <input type="password" id="access-key" class="login-input" placeholder="ACCESS KEY" value="••••••••">
+      <button class="login-btn" onclick="authenticateUser()">ENTER TACTICAL HQ</button>
     </div>
+  </div>
 
-    <!-- Emergency Casualty Alert Banner -->
-    <div id="casualtyNoticeBar">
-        <span id="casualtyNoticeText">🚨 SIGNAL ALERT: CASUALTY / DISTRESS RECORDED ON GRID</span>
-        <button onclick="focusLatestCasualty()" style="background:#fff; color:#000; border:none; padding:4px 10px; font-weight:bold; cursor:pointer; border-radius:4px;">FOCUS TARGET</button>
+  <!-- ================= 2. DASHBOARD BAR WITH SIREN TOGGLE ================= -->
+  <div class="top-bar">
+    <div style="font-weight:bold; letter-spacing:1px; color:#44b0ff;">
+      TACTICAL BLUE FORCE DASHBOARD
     </div>
-
-    <!-- Header Operations Bar -->
-    <header>
-        <div class="op-title">FORCE ONE TACTICAL C2</div>
-        <div class="stat-badges">
-            <div class="badge" style="color:var(--accent-green);">ONLINE: <span id="onlineCount">0</span></div>
-            <div class="badge" style="color:var(--accent-red);">CASUALTIES: <span id="casualtyCount">0</span></div>
-            <div class="badge" style="color:var(--accent-yellow);">STALE: <span id="staleCount">0</span></div>
-        </div>
-        <div>
-            <!-- View Controls -->
-            <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
-            
-            <!-- Quick Threat / SITREP Placement Buttons -->
-            <button id="btnHostile" class="btn-tool btn-threat" onclick="setQuickMarker('HOSTILE')">🔴 +HOSTILE</button>
-            <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
-            <button id="btnBreach" class="btn-tool" onclick="setQuickMarker('BREACH')">🟢 +BREACH</button>
-            
-            <!-- Operational Tools -->
-            <button id="measureBtn" class="btn-tool" onclick="toggleMeasureTool()">📏 MEASURE</button>
-            <button id="sirenMuteBtn" class="btn-tool" onclick="toggleSirenMute()">🔔 SIREN: ON</button>
-            <button class="btn-tool" onclick="clearSitRepMarkers()">🧹 CLEAR SITREPS</button>
-            <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOGOUT</button>
-        </div>
-    </header>
-
-    <!-- Workspace -->
-    <div class="workspace">
-        <div id="tacticalMap"></div>
-
-        <div id="sidebarPanel" class="sidebar">
-            <div class="sidebar-header">
-                <span>OPERATIONAL ELEMENTS</span>
-                <span id="totalUnitsBadge" style="font-size:0.75rem; color:var(--text-muted);">0 UNITS</span>
-            </div>
-            <div id="unitList" class="unit-list">
-                <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
-                    Enter Operations Password to connect...
-                </div>
-            </div>
-        </div>
+    <div>
+      <!-- SIREN MASTER TOGGLE BUTTON -->
+      <button id="sirenMasterBtn" class="siren-toggle-btn siren-enabled" onclick="toggleSirenMaster()">
+        🚨 SIREN: ON
+      </button>
     </div>
-
-    <script>
-        // --- 1. FIREBASE CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAXJsxJDkSxiYFHRKWKjPVkWSDcnAXb4_g",
-            authDomain: "forceone-ops.firebaseapp.com",
-            databaseURL: "https://forceone-ops-default-rtdb.firebaseio.com",
-            projectId: "forceone-ops",
-            storageBucket: "forceone-ops.firebasestorage.app",
-            messagingSenderId: "1035569483131",
-            appId: "1:1035569483131:web:ca675d22897f344f2ac1de"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        // --- 2. MAP INITIALIZATION ---
-        const map = L.map('tacticalMap', { zoomControl: false }).setView([19.143896, 72.870933], 15);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        const tacticalDarkLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            className: 'dark-tiles',
-            attribution: 'Tactical Grid'
-        }).addTo(map);
-
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19,
-            attribution: 'Esri Satellite'
-        });
-
-        L.control.layers({
-            "Dark Tactical Map": tacticalDarkLayer,
-            "Satellite Imagery": satelliteLayer
-        }, null, { position: 'topright' }).addTo(map);
-
-        // --- 3. STORAGE & TRACKING STATE ---
-        const markers = {};          // Map markers for commandos
-        const accuracyCircles = {};  // Translucent GPS accuracy bubbles
-        const unitSegments = {};     // Movement path line segments
-        const lastPositions = {};    // Last recorded coordinates [lat, lng]
-        const situationMarkers = []; // Tactical sitrep pins (hostile, breach, etc.)
-        let latestCasualtyLatLng = null;
-
-        let telemetryRef = null;
-        let isListening = false;
-        
-        // Operations Password
-        const DASHBOARD_PASSWORD = "Forceone@123";
-
-        // WebRTC & Audio Settings
-        const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-        let activePeerConnection = null;
-        let currentListeningUnit = null;
-        let candidatesListenerRef = null;
-        let isSirenMuted = false;
-        let audioCtx = null;
-        let isSirenPlaying = false;
-
-        // Threat Placement Active State
-        let activePlacementType = null;
-
-        const groupColors = {
-            "Alfa": "#0284c7",
-            "Bravo": "#2563eb",
-            "Charlie": "#0d9488",
-            "Delta": "#059669",
-            "SOT": "#d97706",
-            "Sniper": "#475569",
-            "BD": "#7c2d12"
-        };
-
-        // Global unlock for browser audio engine
-        document.addEventListener('click', () => {
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        });
-
-        // --- 4. TOGGLE ROSTER / FULL-SCREEN MAP ---
-        function toggleSidebar() {
-            const sidebar = document.getElementById("sidebarPanel");
-            const btn = document.getElementById("toggleRosterBtn");
-            const isHidden = sidebar.style.display === "none";
-
-            if (isHidden) {
-                sidebar.style.display = "flex";
-                btn.innerText = "👁️ HIDE ROSTER";
-                btn.classList.add("active");
-            } else {
-                sidebar.style.display = "none";
-                btn.innerText = "👁️ SHOW ROSTER";
-                btn.classList.remove("active");
-            }
-
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 100);
-        }
-
-        // --- 5. AUTHENTICATION & SESSION LOGOUT SANITIZATION ---
-        function verifyAccess() {
-            const enteredPassword = document.getElementById("c2Password").value;
-            if (enteredPassword === DASHBOARD_PASSWORD) {
-                document.getElementById("authOverlay").style.display = "none";
-                document.getElementById("c2Password").value = "";
-
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-
-                startListeningTelemetry();
-            } else {
-                alert("ACCESS DENIED: Invalid Tactical Password");
-            }
-        }
-
-        function logoutC2() {
-            // 1. Detach Firebase Listener
-            if (telemetryRef) {
-                telemetryRef.off();
-                telemetryRef = null;
-            }
-            isListening = false;
-
-            // 2. Clear All Commando Markers & Accuracy Bubbles
-            Object.keys(markers).forEach(key => {
-                if (markers[key]) map.removeLayer(markers[key]);
-                delete markers[key];
-            });
-            Object.keys(accuracyCircles).forEach(key => {
-                if (accuracyCircles[key]) map.removeLayer(accuracyCircles[key]);
-                delete accuracyCircles[key];
-            });
-
-            // 3. Clear All Traveled Path Segments (Blue and Red)
-            Object.keys(unitSegments).forEach(key => {
-                if (unitSegments[key]) {
-                    unitSegments[key].forEach(seg => map.removeLayer(seg));
-                }
-                delete unitSegments[key];
-            });
-            Object.keys(lastPositions).forEach(key => delete lastPositions[key]);
-
-            // 4. Clear Tactical SitRep Pins
-            clearSitRepMarkers();
-
-            // 5. Clear Measurement Line
-            if (measureLine) {
-                map.removeLayer(measureLine);
-                measureLine = null;
-            }
-            measurePoints = [];
-            measureActive = false;
-            document.getElementById("measureBtn").classList.remove("active");
-            document.getElementById("measureBtn").innerText = "📏 MEASURE";
-
-            // 6. Terminate WebRTC Voice Monitoring
-            stopAudioMonitoring();
-
-            // 7. Reset Counters and Emergency Notice
-            document.getElementById("onlineCount").innerText = "0";
-            document.getElementById("casualtyCount").innerText = "0";
-            document.getElementById("staleCount").innerText = "0";
-            document.getElementById("totalUnitsBadge").innerText = "0 UNITS";
-            document.getElementById("casualtyNoticeBar").style.display = "none";
-
-            // 8. Restore Sidebar Visibility
-            const sidebar = document.getElementById("sidebarPanel");
-            sidebar.style.display = "flex";
-            const btn = document.getElementById("toggleRosterBtn");
-            btn.innerText = "👁️ HIDE ROSTER";
-            btn.classList.add("active");
-
-            // 9. Reset Placement Buttons
-            resetPlacementState();
-
-            // 10. Wipe Sidebar Roster
-            document.getElementById("unitList").innerHTML = `
-                <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
-                    Session locked. Enter Password to view telemetry.
-                </div>
-            `;
-
-            // 11. Display Password Overlay
-            document.getElementById("authOverlay").style.display = "flex";
-        }
-
-        // --- 6. TELEMETRY & PERSISTENT ACCURACY ENGINE ---
-        function startListeningTelemetry() {
-            if (isListening) return;
-            isListening = true;
-
-            telemetryRef = database.ref("commandos");
-            telemetryRef.on("value", (snapshot) => {
-                const data = snapshot.val() || {};
-                const now = Date.now();
-
-                let onlineCount = 0;
-                let casualtyCount = 0;
-                let staleCount = 0;
-                const unitListEl = document.getElementById("unitList");
-                unitListEl.innerHTML = "";
-
-                const allKeys = Object.keys(data);
-                document.getElementById("totalUnitsBadge").innerText = `${allKeys.length} UNITS`;
-
-                allKeys.forEach((key) => {
-                    const unit = data[key];
-                    const isOnline = unit.status === "ONLINE";
-                    const isCasualty = !!unit.casualty;
-                    const timeDiff = now - (unit.lastUpdated || 0);
-                    const isStale = isOnline && timeDiff > 30000;
-
-                    if (isOnline) onlineCount++;
-                    if (isCasualty) {
-                        casualtyCount++;
-                        latestCasualtyLatLng = [unit.lat, unit.lng];
-                        playDistressSiren();
-                    }
-                    if (isStale) staleCount++;
-
-                    // --- PERSISTENT POSITION PLOTTING ---
-                    if (unit.lat && unit.lng) {
-                        const latLng = [unit.lat, unit.lng];
-                        const accRadius = Math.max(unit.accuracy || 5, 2);
-
-                        let markerColor = groupColors[unit.group] || "#0284c7";
-                        let markerClass = "";
-                        
-                        if (isCasualty) {
-                            markerClass = "marker-casualty";
-                            markerColor = "var(--accent-red)";
-                        } else if (!isOnline) {
-                            markerClass = "marker-offline";
-                            markerColor = "#64748b";
-                        }
-
-                        const statusText = isCasualty ? 'CASUALTY' : (isOnline ? (isStale ? 'STALE' : 'ONLINE') : 'OFFLINE (LAST KNOWN)');
-
-                        // 1. Commando Marker
-                        if (!markers[key]) {
-                            const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
-                            const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] });
-                            markers[key] = L.marker(latLng, { icon: icon }).addTo(map);
-                            markers[key].bindPopup(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
-                        } else {
-                            markers[key].setLatLng(latLng);
-                            const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
-                            markers[key].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }));
-                            markers[key].getPopup().setContent(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
-                        }
-
-                        // 2. High-Accuracy Uncertainty Bubble
-                        const bubbleColor = isCasualty ? '#ef4444' : (isOnline ? '#38bdf8' : '#64748b');
-                        if (!accuracyCircles[key]) {
-                            accuracyCircles[key] = L.circle(latLng, {
-                                radius: accRadius,
-                                color: bubbleColor,
-                                weight: 1,
-                                dashArray: isOnline ? null : '3, 3',
-                                fillOpacity: isOnline ? 0.12 : 0.05,
-                                fillColor: bubbleColor
-                            }).addTo(map);
-                        } else {
-                            accuracyCircles[key].setLatLng(latLng);
-                            accuracyCircles[key].setRadius(accRadius);
-                            accuracyCircles[key].setStyle({
-                                color: bubbleColor,
-                                fillColor: bubbleColor,
-                                fillOpacity: isOnline ? 0.12 : 0.05
-                            });
-                        }
-
-                        // 3. Movement Path Segments
-                        if (!unitSegments[key]) unitSegments[key] = [];
-
-                        if (isOnline) {
-                            if (lastPositions[key]) {
-                                const prevLatLng = lastPositions[key];
-                                const distanceMoved = map.distance(prevLatLng, latLng);
-
-                                const minMoveThreshold = Math.max(2.5, accRadius * 0.4);
-
-                                if (distanceMoved >= minMoveThreshold) {
-                                    const segmentColor = isCasualty ? '#ef4444' : '#38bdf8';
-                                    const isDashed = isCasualty ? '5, 5' : null;
-
-                                    const segment = L.polyline([prevLatLng, latLng], {
-                                        color: segmentColor,
-                                        weight: 3.5,
-                                        opacity: 0.85,
-                                        dashArray: isDashed
-                                    }).addTo(map);
-
-                                    unitSegments[key].push(segment);
-
-                                    if (unitSegments[key].length > 50) {
-                                        const oldestSegment = unitSegments[key].shift();
-                                        map.removeLayer(oldestSegment);
-                                    }
-
-                                    lastPositions[key] = latLng;
-                                }
-                            } else {
-                                lastPositions[key] = latLng;
-                            }
-                        }
-                    }
-
-                    // 4. Sidebar Roster Card
-                    const card = document.createElement("div");
-                    card.className = `unit-card ${isCasualty ? 'casualty' : ''} ${isStale ? 'stale' : ''} ${!isOnline ? 'offline' : ''}`;
-                    card.onclick = () => { 
-                        if (unit.lat && unit.lng) map.setView([unit.lat, unit.lng], 17); 
-                    };
-
-                    card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong>${unit.callsign || key}</strong>
-                            <span style="font-size:0.75rem; color:${isCasualty ? 'var(--accent-red)' : (isOnline ? 'var(--accent-green)' : '#64748b')}">
-                                ${isCasualty ? '🚨 CASUALTY' : (isStale ? '⚠️ STALE' : (isOnline ? '● ONLINE' : '○ OFFLINE'))}
-                            </span>
-                        </div>
-                        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-                            ${isOnline ? `ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m \vert{} HDG: ${unit.heading || 0}°` : 'BEACON OFFLINE (LKP)'} | GRP: ${unit.group || 'N/A'}
-                        </div>
-                        ${unit.audioActive ? `
-                            <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
-                                    onclick="event.stopPropagation(); toggleAudioListen('${key}')">
-                                ${currentListeningUnit === key ? '🔊 SPEAKER: ON (MUTE)' : '🎙️ TURN SPEAKER ON (LISTEN)'}
-                            </button>
-                        ` : ''}
-                    `;
-                    unitListEl.appendChild(card);
-                });
-
-                document.getElementById("onlineCount").innerText = onlineCount;
-                document.getElementById("casualtyCount").innerText = casualtyCount;
-                document.getElementById("staleCount").innerText = staleCount;
-                document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
-            });
-        }
-
-        function focusLatestCasualty() {
-            if (latestCasualtyLatLng) map.setView(latestCasualtyLatLng, 18);
-        }
-
-        // --- 7. TACTICAL DISTRESS SIREN (3-SECOND DURATION) ---
-        function playDistressSiren() {
-            if (isSirenMuted || isSirenPlaying) return;
-            try {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') return;
-
-                isSirenPlaying = true;
-                const t = audioCtx.currentTime;
-
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = "sawtooth";
-
-                // Sweep frequencies for 3 full seconds (5 cycles of 0.6s)
-                for (let i = 0; i < 5; i++) {
-                    const step = i * 0.6;
-                    osc.frequency.setValueAtTime(850, t + step);
-                    osc.frequency.exponentialRampToValueAtTime(420, t + step + 0.3);
-                    osc.frequency.exponentialRampToValueAtTime(850, t + step + 0.6);
-                }
-
-                // Volume envelope
-                gain.gain.setValueAtTime(0.25, t);
-                gain.gain.setValueAtTime(0.25, t + 2.7);
-                gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
-
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                osc.start(t);
-                osc.stop(t + 3.0);
-
-                setTimeout(() => {
-                    isSirenPlaying = false;
-                }, 3000);
-
-            } catch (e) {
-                console.warn("Audio Context error:", e);
-                isSirenPlaying = false;
-            }
-        }
-
-        function toggleSirenMute() {
-            isSirenMuted = !isSirenMuted;
-            document.getElementById("sirenMuteBtn").innerText = isSirenMuted ? "🔕 SIREN: MUTED" : "🔔 SIREN: ON";
-            document.getElementById("sirenMuteBtn").classList.toggle("active", isSirenMuted);
-        }
-
-        // --- 8. CASUALTY AUDIO INTERCEPT (WebRTC) ---
-        async function toggleAudioListen(unitKey) {
-            const player = document.getElementById("remoteAudioPlayer");
-
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-            if (currentListeningUnit === unitKey) {
-                stopAudioMonitoring();
-                return;
-            }
-
-            stopAudioMonitoring();
-
-            currentListeningUnit = unitKey;
-            const btn = document.getElementById(`audioBtn_${unitKey}`);
-            if (btn) {
-                btn.classList.add("monitoring");
-                btn.innerText = "⏳ CONNECTING...";
-            }
-
-            player.muted = false;
-            player.volume = 1.0;
-
-            const pc = new RTCPeerConnection(rtcConfig);
-            activePeerConnection = pc;
-
-            pc.ontrack = (event) => {
-                player.srcObject = event.streams[0];
-                player.play().catch(e => console.warn("Autoplay block:", e));
-                if (btn) {
-                    btn.classList.add("monitoring");
-                    btn.innerText = "🔊 SPEAKER: ON (MUTE)";
-                }
-            };
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate && pc.signalingState !== "closed") {
-                    database.ref(`webrtc/${unitKey}/m_candidates`).push(event.candidate.toJSON());
-                }
-            };
-
-            try {
-                const offerSnap = await database.ref(`webrtc/${unitKey}/offer`).get();
-                const offer = offerSnap.val();
-                if (!offer) {
-                    alert("Audio stream not ready or commando offline.");
-                    stopAudioMonitoring();
-                    return;
-                }
-
-                await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                await database.ref(`webrtc/${unitKey}/answer`).set({ sdp: answer.sdp, type: answer.type });
-
-                candidatesListenerRef = database.ref(`webrtc/${unitKey}/c_candidates`);
-                candidatesListenerRef.on("child_added", async (snap) => {
-                    const candidate = snap.val();
-                    if (candidate && pc && pc.signalingState !== "closed" && pc.remoteDescription) {
-                        try {
-                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                        } catch (err) {
-                            console.warn("ICE candidate error:", err);
-                        }
-                    }
-                });
-            } catch (err) {
-                console.error("Audio connection error:", err);
-                stopAudioMonitoring();
-            }
-        }
-
-        function stopAudioMonitoring() {
-            if (candidatesListenerRef) {
-                candidatesListenerRef.off();
-                candidatesListenerRef = null;
-            }
-            if (activePeerConnection) {
-                activePeerConnection.close();
-                activePeerConnection = null;
-            }
-            const player = document.getElementById("remoteAudioPlayer");
-            if (player) {
-                player.srcObject = null;
-                player.pause();
-            }
-
-            if (currentListeningUnit) {
-                const btn = document.getElementById(`audioBtn_${currentListeningUnit}`);
-                if (btn) {
-                    btn.classList.remove("monitoring");
-                    btn.innerText = "🎙️ TURN SPEAKER ON (LISTEN)";
-                }
-                currentListeningUnit = null;
-            }
-        }
-
-        // --- 9. TACTICAL SITREP PINS (TOOLBAR BUTTONS + RIGHT-CLICK) ---
-        function setQuickMarker(type) {
-            if (activePlacementType === type) {
-                resetPlacementState();
-            } else {
-                resetPlacementState();
-                activePlacementType = type;
-                if (type === 'HOSTILE') document.getElementById("btnHostile").classList.add("active");
-                if (type === 'HAZARD') document.getElementById("btnIed").classList.add("active");
-                if (type === 'BREACH') document.getElementById("btnBreach").classList.add("active");
-            }
-        }
-
-        function resetPlacementState() {
-            activePlacementType = null;
-            document.getElementById("btnHostile").classList.remove("active");
-            document.getElementById("btnIed").classList.remove("active");
-            document.getElementById("btnBreach").classList.remove("active");
-        }
-
-        function placeSitRep(latlng, type) {
-            let label = "PIN";
-            let color = "#ef4444";
-            if (type === "HOSTILE") { label = "HOSTILE"; color = "#dc2626"; }
-            else if (type === "BREACH") { label = "BREACH"; color = "#16a34a"; }
-            else if (type === "HAZARD") { label = "IED / HAZARD"; color = "#d97706"; }
-            else if (type === "ASSEMBLY") { label = "ASSEMBLY"; color = "#2563eb"; }
-
-            const pinIcon = L.divIcon({
-                html: `<div style="background:${color}; color:#fff; font-size:10px; font-weight:bold; padding:3px 6px; border-radius:4px; border:1px solid #fff; box-shadow:0 0 8px rgba(0,0,0,0.8);">${label}</div>`,
-                className: '',
-                iconSize: [80, 20]
-            });
-            const sitMarker = L.marker(latlng, { icon: pinIcon }).addTo(map)
-                .bindPopup(`<strong>${label}</strong><br>LAT: ${latlng.lat.toFixed(6)}<br>LNG: ${latlng.lng.toFixed(6)}`);
-            
-            situationMarkers.push(sitMarker);
-        }
-
-        // Right-Click Context Menu for SITREPs
-        map.on('contextmenu', (e) => {
-            const pinType = prompt("SELECT SITREP MARKER:\n1 = 🔴 Hostile / Terrorist\n2 = 🟢 Breach / Entry Point\n3 = ⚠️ IED / Hazard Zone\n4 = 🔵 Assembly Area", "1");
-            if (!pinType) return;
-
-            let type = "HOSTILE";
-            if (pinType === "1") type = "HOSTILE";
-            else if (pinType === "2") type = "BREACH";
-            else if (pinType === "3") type = "HAZARD";
-            else if (pinType === "4") type = "ASSEMBLY";
-
-            placeSitRep(e.latlng, type);
-        });
-
-        function clearSitRepMarkers() {
-            situationMarkers.forEach(marker => map.removeLayer(marker));
-            situationMarkers.length = 0;
-        }
-
-        // --- 10. DISTANCE MEASUREMENT & MAP CLICK DISPATCHER ---
-        let measureActive = false;
-        let measurePoints = [];
-        let measureLine = null;
-
-        function toggleMeasureTool() {
-            resetPlacementState();
-            measureActive = !measureActive;
-            measurePoints = [];
-            if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
-            document.getElementById("measureBtn").classList.toggle("active", measureActive);
-            document.getElementById("measureBtn").innerText = measureActive ? "📏 2 POINTS" : "📏 MEASURE";
-        }
-
-        map.on('click', (e) => {
-            // Priority 1: Toolbar Threat Placement
-            if (activePlacementType) {
-                placeSitRep(e.latlng, activePlacementType);
-                resetPlacementState();
-                return;
-            }
-
-            // Priority 2: Distance Measurement
-            if (!measureActive) return;
-            measurePoints.push(e.latlng);
-
-            if (measurePoints.length === 2) {
-                const dist = measurePoints[0].distanceTo(measurePoints[1]);
-                measureLine = L.polyline(measurePoints, { color: '#f59e0b', weight: 3, dashArray: '5, 5' }).addTo(map);
-                measureLine.bindPopup(`<strong>SEPARATION:</strong> ${dist.toFixed(1)} meters`).openPopup();
-                measureActive = false;
-                document.getElementById("measureBtn").classList.remove("active");
-                document.getElementById("measureBtn").innerText = "📏 MEASURE";
-            }
-        });
-    </script>
+  </div>
+
+  <!-- ================= 3. AUDIO & DISTRESS LOGIC SCRIPT ================= -->
+  <script>
+    // Unlock dashboard
+    function authenticateUser() {
+      // Initialize browser audio context on first click
+      initAudioEngine();
+      document.getElementById('login-overlay').style.display = 'none';
+    }
+
+    /* ---------------- SIREN & AUDIO ENGINE ---------------- */
+    let sirenMasterEnabled = true; // Master toggle status
+    let audioCtx = null;
+    let sirenOsc = null;
+    let sirenGain = null;
+    let sirenTimer = null;
+    let activeDistressUnits = new Set(); // Prevents sound from re-triggering constantly
+
+    // Browser audio setup
+    function initAudioEngine() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    // Toggle Siren ON / OFF button
+    function toggleSirenMaster() {
+      sirenMasterEnabled = !sirenMasterEnabled;
+      const btn = document.getElementById('sirenMasterBtn');
+
+      if (sirenMasterEnabled) {
+        btn.innerText = "🚨 SIREN: ON";
+        btn.className = "siren-toggle-btn siren-enabled";
+      } else {
+        btn.innerText = "🔇 SIREN: OFF";
+        btn.className = "siren-toggle-btn siren-disabled";
+        // Stop any siren playing immediately
+        stopTacticalSiren();
+      }
+    }
+
+    // Play Siren for EXACTLY 3 Seconds
+    function startTacticalSiren(durationMs = 3000) {
+      if (!sirenMasterEnabled) return;
+      initAudioEngine();
+      stopTacticalSiren(); // Reset any existing siren
+
+      try {
+        sirenOsc = audioCtx.createOscillator();
+        sirenGain = audioCtx.createGain();
+
+        sirenOsc.type = 'sawtooth';
+        const now = audioCtx.currentTime;
+
+        // Realistic emergency wail pattern (600Hz <-> 1100Hz)
+        sirenOsc.frequency.setValueAtTime(650, now);
+        sirenOsc.frequency.linearRampToValueAtTime(1150, now + 0.5);
+        sirenOsc.frequency.linearRampToValueAtTime(650, now + 1.0);
+        sirenOsc.frequency.linearRampToValueAtTime(1150, now + 1.5);
+        sirenOsc.frequency.linearRampToValueAtTime(650, now + 2.0);
+        sirenOsc.frequency.linearRampToValueAtTime(1150, now + 2.5);
+        sirenOsc.frequency.linearRampToValueAtTime(650, now + 3.0);
+
+        sirenGain.gain.setValueAtTime(0.25, now);
+
+        sirenOsc.connect(sirenGain);
+        sirenGain.connect(audioCtx.destination);
+        sirenOsc.start();
+
+        // STRICT CUTOFF AT 3 SECONDS
+        sirenTimer = setTimeout(() => {
+          stopTacticalSiren();
+        }, durationMs);
+
+      } catch (err) {
+        console.error("Audio error:", err);
+      }
+    }
+
+    // Stop Siren Immediately
+    function stopTacticalSiren() {
+      if (sirenTimer) {
+        clearTimeout(sirenTimer);
+        sirenTimer = null;
+      }
+      if (sirenOsc) {
+        try {
+          sirenOsc.stop();
+          sirenOsc.disconnect();
+        } catch (e) {}
+        sirenOsc = null;
+      }
+    }
+
+    // Play Commando Distress Voice Alert
+    function playCommandoVoice(commandoName) {
+      if (!sirenMasterEnabled) return;
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any pending speech
+        const msg = new SpeechSynthesisUtterance(`Alert! Distress button pressed by ${commandoName}`);
+        msg.rate = 1.0;
+        msg.pitch = 1.0;
+        msg.volume = 1.0;
+        window.speechSynthesis.speak(msg);
+      }
+    }
+
+    /* ---------------- DISTRESS EVENT HANDLER ---------------- */
+    // Call this function whenever a unit triggers Distress
+    function onCommandoDistress(unitId, unitName) {
+      // Check if siren toggle is enabled
+      if (!sirenMasterEnabled) return;
+
+      // Only trigger once when distress is first activated
+      if (!activeDistressUnits.has(unitId)) {
+        activeDistressUnits.add(unitId);
+
+        // 1. Play siren for exactly 3 seconds
+        startTacticalSiren(3000);
+
+        // 2. Announce commando voice
+        playCommandoVoice(unitName);
+      }
+    }
+
+    // Call this function when the distress is cleared/resolved
+    function onCommandoDistressCleared(unitId) {
+      activeDistressUnits.delete(unitId);
+    }
+  </script>
 </body>
 </html>
