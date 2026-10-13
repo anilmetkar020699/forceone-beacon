@@ -52,31 +52,33 @@
       background: rgba(14, 22, 35, 0.97);
       border: 1px solid rgba(212, 175, 55, 0.45);
       border-radius: 8px;
-      padding: 30px;
-      width: 350px;
+      padding: 28px;
+      width: 360px;
       text-align: center;
-      box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.15);
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.95), 0 0 15px rgba(212, 175, 55, 0.2);
     }
 
-    .login-card img {
-      width: 130px;
-      height: auto;
-      margin-bottom: 12px;
-      filter: drop-shadow(0px 0px 8px rgba(212, 175, 55, 0.4));
+    .f1-vector-emblem {
+      width: 140px;
+      height: 160px;
+      margin: 0 auto 10px auto;
+      display: block;
+      filter: drop-shadow(0px 0px 10px rgba(212, 175, 55, 0.45));
     }
 
     .login-card h2 {
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 800;
-      letter-spacing: 2px;
+      letter-spacing: 2.5px;
       color: #ffffff;
     }
 
     .login-card .motto {
       font-size: 13px;
       color: var(--text-gold);
-      margin: 4px 0 20px 0;
+      margin: 4px 0 18px 0;
       letter-spacing: 1px;
+      font-weight: 600;
     }
 
     .login-input {
@@ -294,33 +296,96 @@
       background: #090e15;
     }
 
-    /* Dark Mode Filter for Leaflet Tiles */
     .leaflet-tile-pane {
       filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%);
-    }
-
-    /* Tactical Marker Styles */
-    .tactical-marker {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      color: white;
-      font-weight: bold;
-      font-size: 10px;
-      border: 2px solid #fff;
-      box-shadow: 0 0 8px rgba(0,0,0,0.8);
     }
   </style>
 </head>
 <body>
 
-  <!-- ================= 1. LOGIN OVERLAY WITH LOGO ================= -->
+  <!-- ================= 1. LOGIN OVERLAY WITH EMBEDDED FORCE ONE EMBLEM ================= -->
   <div id="login-overlay">
     <div class="login-card">
-      <img src="force_one_logo.png" alt="FORCE ONE">
+      
+      <!-- Embedded Force One Insignia Vector (No external image file needed) -->
+      <svg class="f1-vector-emblem" viewBox="0 0 240 280">
+        <defs>
+          <radialGradient id="bgGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#1b2d5a"/>
+            <stop offset="100%" stop-color="#080e22"/>
+          </radialGradient>
+          <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffe680"/>
+            <stop offset="50%" stop-color="#d4af37"/>
+            <stop offset="100%" stop-color="#997a15"/>
+          </linearGradient>
+          <linearGradient id="bladeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fdfdfd"/>
+            <stop offset="50%" stop-color="#d4af37"/>
+            <stop offset="100%" stop-color="#997a15"/>
+          </linearGradient>
+          <linearGradient id="ribbonGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#b81b24"/>
+            <stop offset="100%" stop-color="#730e14"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Outer Wreath / Flame Petals -->
+        <path d="M120 10 C185 10 230 65 230 140 C230 205 185 245 120 255 C55 245 10 205 10 140 C10 65 55 10 120 10 Z" 
+              fill="url(#goldGradient)" stroke="#80620c" stroke-width="2"/>
+        
+        <!-- Outer Golden Notch Cuts -->
+        <path d="M10 140 L30 130 L20 110 L40 105 L30 85 L52 82 L45 60 L70 65 L68 45 L95 55 L100 35 L120 45 L140 35 L145 55 L172 45 L170 65 L195 60 L188 82 L210 85 L200 105 L220 110 L210 130 L230 140 L210 160 L220 180 L198 185 L205 205 L180 208 L182 225 L160 223 L155 240 L120 255 L85 240 L80 223 L58 225 L60 208 L35 205 L42 185 L20 180 L30 160 Z" 
+              fill="url(#goldGradient)" opacity="0.95"/>
+
+        <!-- Inner Navy Oval -->
+        <ellipse cx="120" cy="138" rx="88" ry="102" fill="url(#bgGradient)" stroke="url(#goldGradient)" stroke-width="4"/>
+
+        <!-- Top Police Star -->
+        <polygon points="120,38 124,48 135,48 126,54 130,64 120,58 110,64 114,54 105,48 116,48" 
+                 fill="#4da6ff" stroke="#ffe680" stroke-width="1.2"/>
+        
+        <!-- Maharashtra Police Subtitle -->
+        <text x="120" y="75" fill="#f0e6c8" font-size="8.5" font-weight="bold" text-anchor="middle" letter-spacing="1">MAHARASHTRA POLICE</text>
+
+        <!-- Sunburst Radiance Behind Knife -->
+        <g stroke="url(#goldGradient)" stroke-width="1.5" opacity="0.75">
+          <line x1="120" y1="140" x2="60" y2="105"/>
+          <line x1="120" y1="140" x2="70" y2="92"/>
+          <line x1="120" y1="140" x2="85" y2="82"/>
+          <line x1="120" y1="140" x2="102" y2="76"/>
+          <line x1="120" y1="140" x2="138" y2="76"/>
+          <line x1="120" y1="140" x2="155" y2="82"/>
+          <line x1="120" y1="140" x2="170" y2="92"/>
+          <line x1="120" y1="140" x2="180" y2="105"/>
+        </g>
+
+        <!-- Commando Combat Dagger -->
+        <path d="M120 62 L128 105 L128 200 L112 200 L112 105 Z" fill="url(#bladeGradient)" stroke="#594305" stroke-width="1"/>
+        <line x1="120" y1="62" x2="120" y2="200" stroke="#fff" stroke-width="1.5" opacity="0.8"/>
+        <!-- Dagger Guard & Hilt -->
+        <rect x="100" y="200" width="40" height="7" rx="3" fill="url(#goldGradient)" stroke="#594305" stroke-width="1"/>
+        <rect x="113" y="207" width="14" height="22" rx="2" fill="url(#goldGradient)" stroke="#594305" stroke-width="1"/>
+        <circle cx="120" cy="233" r="5" fill="url(#goldGradient)" stroke="#594305" stroke-width="1"/>
+
+        <!-- Center Shield -->
+        <path d="M52 110 L188 110 C188 155 165 190 120 206 C75 190 52 155 52 110 Z" 
+              fill="#0e1730" stroke="url(#goldGradient)" stroke-width="2.5" opacity="0.9"/>
+
+        <!-- Center FORCE ONE Brand Text -->
+        <rect x="68" y="132" width="104" height="25" rx="3" fill="#120606" stroke="url(#goldGradient)" stroke-width="1.8"/>
+        <text x="120" y="150" fill="#fdf2bb" font-size="16" font-weight="900" text-anchor="middle" letter-spacing="2" font-family="'Impact', 'Arial Black', sans-serif">FORCE</text>
+        <rect x="68" y="157" width="104" height="25" rx="3" fill="#120606" stroke="url(#goldGradient)" stroke-width="1.8"/>
+        <text x="120" y="175" fill="#fdf2bb" font-size="16" font-weight="900" text-anchor="middle" letter-spacing="2" font-family="'Impact', 'Arial Black', sans-serif">ONE</text>
+
+        <!-- Bottom Crimson Ribbon Banner -->
+        <path d="M30 200 C70 235 170 235 210 200 L216 220 C170 262 70 262 24 220 Z" 
+              fill="url(#ribbonGradient)" stroke="url(#goldGradient)" stroke-width="2"/>
+        
+        <!-- Motto Text (Sanskrit/Devanagari) -->
+        <text x="120" y="235" fill="#ffe994" font-size="13" font-weight="bold" text-anchor="middle" letter-spacing="0.5">यतः शौर्यं ततो जयः</text>
+      </svg>
+
       <h2>FORCE ONE</h2>
       <div class="motto">यतः शौर्यं ततो जयः</div>
       
@@ -377,7 +442,6 @@
 
       if (pass === 'Forceone@123') {
         err.style.display = 'none';
-        // Unlock Web Audio context on user gesture
         initAudio();
         document.getElementById('login-overlay').style.display = 'none';
         initMap();
@@ -393,7 +457,6 @@
       location.reload();
     }
 
-    // Allow Enter key to submit login
     document.getElementById('password').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') validateLogin();
     });
@@ -452,12 +515,11 @@
         sirenGain.connect(audioCtx.destination);
         sirenOsc.start();
 
-        // STRICT 3-SECOND CUTOFF
+        // STRICT 3-SECOND TIMEOUT
         sirenTimer = setTimeout(() => {
           stopSirenImmediately();
         }, 3000);
 
-        // Commando Voice Announcement
         announceCommandoVoice(commandoName);
 
       } catch (err) {
@@ -482,7 +544,7 @@
     function announceCommandoVoice(commandoName) {
       if (!sirenEnabled) return;
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Clears any blocked buffer
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(`Distress beacon activated by ${commandoName}`);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
@@ -505,17 +567,14 @@
 
     function initMap() {
       if (map) return;
-      // Centered on operations perimeter
       map = L.map('map', { zoomControl: false }).setView([19.148, 72.882], 15);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // OpenStreetMap Layer with CSS Dark filter
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
-      // Add unit markers
       units.forEach(u => {
         const marker = L.circleMarker([u.lat, u.lng], {
           radius: 8,
@@ -576,7 +635,6 @@
 
     /* ================= SYNC WITH FIELD COMMANDO BEACON ================= */
     function listenToCommandoBroadcast() {
-      // 1. BroadcastChannel API for multi-tab communication
       if ('BroadcastChannel' in window) {
         const channel = new BroadcastChannel('f1_tactical_channel');
         channel.onmessage = (event) => {
@@ -584,7 +642,6 @@
         };
       }
 
-      // 2. Storage event fallback
       window.addEventListener('storage', (event) => {
         if (event.key === 'f1_beacon_signal' && event.newValue) {
           try {
@@ -618,7 +675,6 @@
         target.distress = true;
         if (!activeDistressSet.has(target.id)) {
           activeDistressSet.add(target.id);
-          // Play 3-second siren & commando announcement
           triggerDistressSiren(target.name);
         }
       } else if (data.distress === false) {
