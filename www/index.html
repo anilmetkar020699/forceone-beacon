@@ -118,9 +118,11 @@
             return null;
         });
 
-        // Native (installed app) uses the background GPS plugin; a normal browser falls back to the web API.
-        const isNative = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
-        const BackgroundGeolocation = isNative ? Capacitor.registerPlugin("BackgroundGeolocation") : null;
+        // Safe detection that will not crash the app
+const isNative = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
+const BackgroundGeolocation = (window.Capacitor && window.Capacitor.Plugins) 
+    ? window.Capacitor.Plugins.BackgroundGeolocation 
+    : null;
 
         let isTransmitting = false;
         let isCasualty = false;
@@ -199,21 +201,21 @@
             if (document.visibilityState === "visible" && isTransmitting && !isNative) requestWakeLock();
         });
 
-        async function startLocation(callsign) {
-            if (isNative) {
+                async function startLocation(callsign) {
+            if (isNative && BackgroundGeolocation && typeof BackgroundGeolocation.addWatcher === 'function') {
                 nativeWatcherId = await BackgroundGeolocation.addWatcher(
                     {
                         backgroundTitle: "Force One Beacon",
                         backgroundMessage: "Transmitting your position",
                         requestPermissions: true,
                         stale: false,
-                        distanceFilter: 0
+                        distanceFilter: 3
                     },
                     (location, error) => {
                         if (error) {
                             if (error.code === "NOT_AUTHORIZED") {
-                                alert("Location permission is required. Open settings and set Location to 'Allow all the time'.");
-                                BackgroundGeolocation.openSettings();
+                                alert("Location permission required. Set to 'Allow all the time'.");
+                                if (BackgroundGeolocation.openSettings) BackgroundGeolocation.openSettings();
                             }
                             setStatus("GPS ERROR");
                             return;
@@ -238,7 +240,7 @@
         }
 
         async function stopLocation() {
-            if (isNative) {
+            if (isNative && BackgroundGeolocation && typeof BackgroundGeolocation.removeWatcher === 'function') {
                 if (nativeWatcherId !== null) {
                     try { await BackgroundGeolocation.removeWatcher({ id: nativeWatcherId }); } catch (e) {}
                     nativeWatcherId = null;
@@ -248,6 +250,7 @@
                 releaseWakeLock();
             }
         }
+
 
         async function toggleTransmission() {
             if (isTransmitting) {
