@@ -3,61 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FORCE ONE - Tactical Command</title>
+  <title>FORCE ONE - HQ Tactical Command</title>
+  
+  <!-- Leaflet CSS for Tactical Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
     :root {
-      --bg-dark: #0a0f18;
-      --card-bg: #111a28;
-      --accent-blue: #0088ff;
+      --bg-dark: #080d14;
+      --panel-bg: rgba(13, 21, 32, 0.94);
+      --border-color: #1e3048;
+      --accent-blue: #0099ff;
       --alert-red: #ff3344;
+      --warning-amber: #ffaa00;
       --text-gold: #d4af37;
-      --text-light: #e0e8f0;
+      --text-main: #e2eaf4;
+      --text-muted: #758ca3;
     }
 
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-dark);
-      color: var(--text-light);
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
     }
 
-    /* ================= LOGIN SCREEN ================= */
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+    }
+
+    /* ================= LOGIN OVERLAY ================= */
     #login-overlay {
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle at center, #132035 0%, #06090e 100%);
+      background: radial-gradient(circle at center, #111d2e 0%, #05080d 100%);
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 9999;
+      z-index: 10000;
     }
 
-    .login-box {
-      background: rgba(17, 26, 40, 0.95);
-      border: 1px solid rgba(212, 175, 55, 0.4);
-      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.2);
+    .login-card {
+      background: rgba(14, 22, 35, 0.97);
+      border: 1px solid rgba(212, 175, 55, 0.45);
       border-radius: 8px;
-      padding: 30px 40px;
-      width: 340px;
+      padding: 30px;
+      width: 350px;
       text-align: center;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.15);
     }
 
-    .f1-logo {
-      width: 140px;
+    .login-card img {
+      width: 130px;
       height: auto;
       margin-bottom: 12px;
-      filter: drop-shadow(0px 0px 8px rgba(212, 175, 55, 0.5));
+      filter: drop-shadow(0px 0px 8px rgba(212, 175, 55, 0.4));
     }
 
-    .login-title {
+    .login-card h2 {
       font-size: 20px;
       font-weight: 800;
       letter-spacing: 2px;
-      color: #fff;
-      margin: 0;
+      color: #ffffff;
     }
 
-    .login-motto {
+    .login-card .motto {
       font-size: 13px;
       color: var(--text-gold);
       margin: 4px 0 20px 0;
@@ -66,63 +81,237 @@
 
     .login-input {
       width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      box-sizing: border-box;
+      padding: 11px 12px;
+      margin-bottom: 12px;
       background: #090e17;
-      border: 1px solid #203550;
+      border: 1px solid #1f324d;
       color: #fff;
       border-radius: 4px;
       font-size: 14px;
+      outline: none;
+    }
+
+    .login-input:focus {
+      border-color: var(--accent-blue);
     }
 
     .login-btn {
       width: 100%;
       padding: 12px;
-      margin-top: 15px;
       background: #a81c1c;
-      color: white;
-      font-weight: bold;
+      color: #fff;
+      font-weight: 700;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       letter-spacing: 1.5px;
+      transition: background 0.2s;
     }
 
     .login-btn:hover {
       background: #cc2222;
     }
 
-    /* ================= DASHBOARD HEADER CONTROLS ================= */
-    .top-bar {
+    .login-error {
+      color: #ff4d4d;
+      font-size: 12px;
+      margin-top: 10px;
+      display: none;
+      font-weight: 600;
+    }
+
+    /* ================= MAIN DASHBOARD LAYOUT ================= */
+    #app-container {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* TOP BAR */
+    .top-header {
+      height: 48px;
+      background: #0a111a;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
       align-items: center;
-      background: #0d1522;
-      padding: 10px 20px;
-      border-bottom: 1px solid #1f2d42;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 1000;
     }
 
-    .siren-toggle-btn {
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: bold;
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-btn {
+      background: transparent;
+      border: 1px solid #283e58;
+      color: #c0d1e5;
+      padding: 5px 12px;
       border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
-      border: 1px solid #444;
-      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .siren-enabled {
-      background: #1a522a;
-      color: #44ff77;
+    .header-btn:hover {
+      background: #152438;
+    }
+
+    .btn-ied { color: var(--warning-amber); border-color: rgba(255,170,0,0.4); }
+    .btn-breach { color: #2ecc71; border-color: rgba(46,204,113,0.4); }
+    .btn-logout { background: #881a1a; color: #fff; border-color: #aa2222; }
+
+    .siren-toggle {
+      font-weight: 800;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: 0.2s;
+    }
+
+    .siren-on {
+      background: rgba(39, 174, 96, 0.2);
+      color: #2ecc71;
       border-color: #27ae60;
     }
 
-    .siren-disabled {
-      background: #4a1515;
-      color: #ff5555;
+    .siren-off {
+      background: rgba(192, 57, 43, 0.2);
+      color: #e74c3c;
       border-color: #c0392b;
+    }
+
+    /* WORKSPACE */
+    .workspace {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 48px);
+      position: relative;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      z-index: 999;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-header span {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #4da6ff;
+    }
+
+    .sidebar-header .count {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .unit-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .unit-card {
+      background: rgba(10, 16, 26, 0.8);
+      border: 1px solid #1a293d;
+      border-radius: 5px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border 0.15s;
+    }
+
+    .unit-card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .unit-card.selected {
+      border-color: var(--warning-amber);
+    }
+
+    .unit-card.distress-active {
+      border-color: var(--alert-red);
+      animation: pulseAlert 1s infinite alternate;
+    }
+
+    @keyframes pulseAlert {
+      from { box-shadow: 0 0 4px rgba(255, 51, 68, 0.4); }
+      to { box-shadow: 0 0 14px rgba(255, 51, 68, 0.9); }
+    }
+
+    .unit-card-title {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      color: #e6f0fa;
+      margin-bottom: 4px;
+    }
+
+    .unit-status {
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .status-online { color: #2ecc71; }
+    .status-stale { color: var(--warning-amber); }
+    .status-offline { color: #5a738e; }
+    .status-distress { color: var(--alert-red); }
+
+    .unit-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* MAP CONTAINER */
+    #map {
+      flex: 1;
+      height: 100%;
+      background: #090e15;
+    }
+
+    /* Dark Mode Filter for Leaflet Tiles */
+    .leaflet-tile-pane {
+      filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%);
+    }
+
+    /* Tactical Marker Styles */
+    .tactical-marker {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      font-size: 10px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 8px rgba(0,0,0,0.8);
     }
   </style>
 </head>
@@ -130,75 +319,117 @@
 
   <!-- ================= 1. LOGIN OVERLAY WITH LOGO ================= -->
   <div id="login-overlay">
-    <div class="login-box">
-      <img src="force_one_logo.png" alt="Force One" class="f1-logo">
-      <div class="login-title">FORCE ONE</div>
-      <div class="login-motto">यतः शौर्यं ततो जयः</div>
-
-      <input type="text" id="callsign" class="login-input" placeholder="OPERATOR CALLSIGN" value="COMMAND HQ">
-      <input type="password" id="access-key" class="login-input" placeholder="ACCESS KEY" value="••••••••">
-      <button class="login-btn" onclick="authenticateUser()">ENTER TACTICAL HQ</button>
+    <div class="login-card">
+      <img src="force_one_logo.png" alt="FORCE ONE">
+      <h2>FORCE ONE</h2>
+      <div class="motto">यतः शौर्यं ततो जयः</div>
+      
+      <input type="text" id="callsign" class="login-input" placeholder="HQ CALLSIGN" value="COMMAND HQ">
+      <input type="password" id="password" class="login-input" placeholder="ENTER ACCESS KEY">
+      <button class="login-btn" onclick="validateLogin()">ENTER TACTICAL HQ</button>
+      <div id="login-err" class="login-error">ACCESS DENIED: INVALID PASSWORD</div>
     </div>
   </div>
 
-  <!-- ================= 2. DASHBOARD BAR WITH SIREN TOGGLE ================= -->
-  <div class="top-bar">
-    <div style="font-weight:bold; letter-spacing:1px; color:#44b0ff;">
-      TACTICAL BLUE FORCE DASHBOARD
-    </div>
-    <div>
-      <!-- SIREN MASTER TOGGLE BUTTON -->
-      <button id="sirenMasterBtn" class="siren-toggle-btn siren-enabled" onclick="toggleSirenMaster()">
-        🚨 SIREN: ON
-      </button>
+  <!-- ================= 2. DASHBOARD SHELL ================= -->
+  <div id="app-container">
+    <!-- TOP NAVIGATION -->
+    <header class="top-header">
+      <div class="header-left">
+        <button class="header-btn btn-ied">▲ +IED</button>
+        <button class="header-btn btn-breach">● +BREACH</button>
+        <button class="header-btn">📐 MEASURE</button>
+        <button class="header-btn btn-logout" onclick="logoutHQ()">🔒 LOGOUT</button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <!-- SIREN TOGGLE SWITCH -->
+        <button id="sirenBtn" class="siren-toggle siren-on" onclick="toggleSiren()">
+          🚨 SIREN: ON
+        </button>
+      </div>
+    </header>
+
+    <!-- WORKSPACE -->
+    <div class="workspace">
+      <!-- SIDEBAR WITH UNITS -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <span>OPERATIONAL ELEMENTS</span>
+          <span class="count" id="unitCount">6 UNITS</span>
+        </div>
+        <div class="unit-list" id="unitListContainer"></div>
+      </aside>
+
+      <!-- LEAFLET TACTICAL MAP -->
+      <div id="map"></div>
     </div>
   </div>
 
-  <!-- ================= 3. AUDIO & DISTRESS LOGIC SCRIPT ================= -->
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
-    // Unlock dashboard
-    function authenticateUser() {
-      // Initialize browser audio context on first click
-      initAudioEngine();
-      document.getElementById('login-overlay').style.display = 'none';
+    /* ================= LOGIN & AUTHENTICATION ================= */
+    function validateLogin() {
+      const pass = document.getElementById('password').value;
+      const err = document.getElementById('login-err');
+
+      if (pass === 'Forceone@123') {
+        err.style.display = 'none';
+        // Unlock Web Audio context on user gesture
+        initAudio();
+        document.getElementById('login-overlay').style.display = 'none';
+        initMap();
+        renderUnits();
+        listenToCommandoBroadcast();
+      } else {
+        err.style.display = 'block';
+        document.getElementById('password').value = '';
+      }
     }
 
-    /* ---------------- SIREN & AUDIO ENGINE ---------------- */
-    let sirenMasterEnabled = true; // Master toggle status
+    function logoutHQ() {
+      location.reload();
+    }
+
+    // Allow Enter key to submit login
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') validateLogin();
+    });
+
+    /* ================= AUDIO & 3-SECOND SIREN ================= */
+    let sirenEnabled = true;
     let audioCtx = null;
     let sirenOsc = null;
     let sirenGain = null;
     let sirenTimer = null;
-    let activeDistressUnits = new Set(); // Prevents sound from re-triggering constantly
+    let activeDistressSet = new Set();
 
-    // Browser audio setup
-    function initAudioEngine() {
+    function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
     }
 
-    // Toggle Siren ON / OFF button
-    function toggleSirenMaster() {
-      sirenMasterEnabled = !sirenMasterEnabled;
-      const btn = document.getElementById('sirenMasterBtn');
+    function toggleSiren() {
+      sirenEnabled = !sirenEnabled;
+      const btn = document.getElementById('sirenBtn');
 
-      if (sirenMasterEnabled) {
-        btn.innerText = "🚨 SIREN: ON";
-        btn.className = "siren-toggle-btn siren-enabled";
+      if (sirenEnabled) {
+        btn.textContent = "🚨 SIREN: ON";
+        btn.className = "siren-toggle siren-on";
       } else {
-        btn.innerText = "🔇 SIREN: OFF";
-        btn.className = "siren-toggle-btn siren-disabled";
-        // Stop any siren playing immediately
-        stopTacticalSiren();
+        btn.textContent = "🔇 SIREN: OFF";
+        btn.className = "siren-toggle siren-off";
+        stopSirenImmediately();
       }
     }
 
-    // Play Siren for EXACTLY 3 Seconds
-    function startTacticalSiren(durationMs = 3000) {
-      if (!sirenMasterEnabled) return;
-      initAudioEngine();
-      stopTacticalSiren(); // Reset any existing siren
+    function triggerDistressSiren(commandoName) {
+      if (!sirenEnabled) return;
+      initAudio();
+      stopSirenImmediately();
 
       try {
         sirenOsc = audioCtx.createOscillator();
@@ -207,33 +438,34 @@
         sirenOsc.type = 'sawtooth';
         const now = audioCtx.currentTime;
 
-        // Realistic emergency wail pattern (600Hz <-> 1100Hz)
-        sirenOsc.frequency.setValueAtTime(650, now);
-        sirenOsc.frequency.linearRampToValueAtTime(1150, now + 0.5);
-        sirenOsc.frequency.linearRampToValueAtTime(650, now + 1.0);
-        sirenOsc.frequency.linearRampToValueAtTime(1150, now + 1.5);
-        sirenOsc.frequency.linearRampToValueAtTime(650, now + 2.0);
-        sirenOsc.frequency.linearRampToValueAtTime(1150, now + 2.5);
-        sirenOsc.frequency.linearRampToValueAtTime(650, now + 3.0);
+        // Realistic warble sweep (700Hz to 1200Hz)
+        sirenOsc.frequency.setValueAtTime(700, now);
+        sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
+        sirenOsc.frequency.linearRampToValueAtTime(700, now + 1.0);
+        sirenOsc.frequency.linearRampToValueAtTime(1200, now + 1.5);
+        sirenOsc.frequency.linearRampToValueAtTime(700, now + 2.0);
+        sirenOsc.frequency.linearRampToValueAtTime(1200, now + 2.5);
+        sirenOsc.frequency.linearRampToValueAtTime(700, now + 3.0);
 
-        sirenGain.gain.setValueAtTime(0.25, now);
-
+        sirenGain.gain.setValueAtTime(0.3, now);
         sirenOsc.connect(sirenGain);
         sirenGain.connect(audioCtx.destination);
         sirenOsc.start();
 
-        // STRICT CUTOFF AT 3 SECONDS
+        // STRICT 3-SECOND CUTOFF
         sirenTimer = setTimeout(() => {
-          stopTacticalSiren();
-        }, durationMs);
+          stopSirenImmediately();
+        }, 3000);
+
+        // Commando Voice Announcement
+        announceCommandoVoice(commandoName);
 
       } catch (err) {
         console.error("Audio error:", err);
       }
     }
 
-    // Stop Siren Immediately
-    function stopTacticalSiren() {
+    function stopSirenImmediately() {
       if (sirenTimer) {
         clearTimeout(sirenTimer);
         sirenTimer = null;
@@ -242,46 +474,159 @@
         try {
           sirenOsc.stop();
           sirenOsc.disconnect();
-        } catch (e) {}
+        } catch(e) {}
         sirenOsc = null;
       }
     }
 
-    // Play Commando Distress Voice Alert
-    function playCommandoVoice(commandoName) {
-      if (!sirenMasterEnabled) return;
-
+    function announceCommandoVoice(commandoName) {
+      if (!sirenEnabled) return;
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stop any pending speech
-        const msg = new SpeechSynthesisUtterance(`Alert! Distress button pressed by ${commandoName}`);
-        msg.rate = 1.0;
-        msg.pitch = 1.0;
-        msg.volume = 1.0;
-        window.speechSynthesis.speak(msg);
+        window.speechSynthesis.cancel(); // Clears any blocked buffer
+        const utterance = new SpeechSynthesisUtterance(`Distress beacon activated by ${commandoName}`);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
       }
     }
 
-    /* ---------------- DISTRESS EVENT HANDLER ---------------- */
-    // Call this function whenever a unit triggers Distress
-    function onCommandoDistress(unitId, unitName) {
-      // Check if siren toggle is enabled
-      if (!sirenMasterEnabled) return;
+    /* ================= TACTICAL UNITS STATE ================= */
+    const units = [
+      { id: "b5c3", name: "Bravo - Hit 5 - Commando 3", status: "OFFLINE", lat: 19.144, lng: 72.875, grp: "Bravo", acc: "N/A", hdg: "0°", distress: false },
+      { id: "c3c2", name: "Charlie - Hit 3 - Commando 2", status: "OFFLINE", lat: 19.146, lng: 72.878, grp: "Charlie", acc: "N/A", hdg: "0°", distress: false },
+      { id: "c3c3", name: "Charlie - Hit 3 - Commando 3", status: "OFFLINE", lat: 19.148, lng: 72.882, grp: "Charlie", acc: "N/A", hdg: "0°", distress: false },
+      { id: "c3c5", name: "Charlie - Hit 3 - Commando 5", status: "ONLINE", lat: 19.151, lng: 72.885, grp: "Charlie", acc: "±18.8m", hdg: "0°", distress: false },
+      { id: "c3c6", name: "Charlie - Hit 3 - Commando 6", status: "OFFLINE", lat: 19.149, lng: 72.889, grp: "Charlie", acc: "N/A", hdg: "0°", distress: false },
+      { id: "c5c2", name: "Charlie - Hit 5 - Commando 2", status: "OFFLINE", lat: 19.142, lng: 72.880, grp: "N/A", acc: "N/A", hdg: "0°", distress: false }
+    ];
 
-      // Only trigger once when distress is first activated
-      if (!activeDistressUnits.has(unitId)) {
-        activeDistressUnits.add(unitId);
+    let map = null;
+    let markers = {};
 
-        // 1. Play siren for exactly 3 seconds
-        startTacticalSiren(3000);
+    function initMap() {
+      if (map) return;
+      // Centered on operations perimeter
+      map = L.map('map', { zoomControl: false }).setView([19.148, 72.882], 15);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // 2. Announce commando voice
-        playCommandoVoice(unitName);
-      }
+      // OpenStreetMap Layer with CSS Dark filter
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      // Add unit markers
+      units.forEach(u => {
+        const marker = L.circleMarker([u.lat, u.lng], {
+          radius: 8,
+          fillColor: u.status === 'ONLINE' ? '#2ecc71' : (u.status === 'STALE' ? '#ffaa00' : '#7f8c8d'),
+          color: '#ffffff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.9
+        }).addTo(map);
+
+        marker.bindPopup(`<b>${u.name}</b><br>GRP: ${u.grp}<br>STATUS: ${u.status}`);
+        markers[u.id] = marker;
+      });
     }
 
-    // Call this function when the distress is cleared/resolved
-    function onCommandoDistressCleared(unitId) {
-      activeDistressUnits.delete(unitId);
+    function renderUnits() {
+      const container = document.getElementById('unitListContainer');
+      container.innerHTML = '';
+
+      units.forEach(u => {
+        const card = document.createElement('div');
+        const isDistress = u.distress;
+        card.className = `unit-card ${isDistress ? 'distress-active' : ''} ${u.status === 'STALE' ? 'selected' : ''}`;
+
+        let statusText = '';
+        if (isDistress) {
+          statusText = `<span class="unit-status status-distress">🚨 DISTRESS</span>`;
+        } else if (u.status === 'ONLINE') {
+          statusText = `<span class="unit-status status-online">● ONLINE</span>`;
+        } else if (u.status === 'STALE') {
+          statusText = `<span class="unit-status status-stale">⚠️ STALE</span>`;
+        } else {
+          statusText = `<span class="unit-status status-offline">○ OFFLINE</span>`;
+        }
+
+        card.innerHTML = `
+          <div class="unit-card-title">
+            <span>${u.name}</span>
+            ${statusText}
+          </div>
+          <div class="unit-meta">
+            ${u.status === 'OFFLINE' 
+              ? `BEACON OFFLINE (LKP) | GRP: ${u.grp}` 
+              : `ACC: ${u.acc} | HDG: ${u.hdg} \vert{} GRP:${u.grp}`}
+          </div>
+        `;
+
+        card.onclick = () => {
+          if (map && markers[u.id]) {
+            map.flyTo([u.lat, u.lng], 16);
+            markers[u.id].openPopup();
+          }
+        };
+
+        container.appendChild(card);
+      });
+    }
+
+    /* ================= SYNC WITH FIELD COMMANDO BEACON ================= */
+    function listenToCommandoBroadcast() {
+      // 1. BroadcastChannel API for multi-tab communication
+      if ('BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('f1_tactical_channel');
+        channel.onmessage = (event) => {
+          handleIncomingTelemetry(event.data);
+        };
+      }
+
+      // 2. Storage event fallback
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'f1_beacon_signal' && event.newValue) {
+          try {
+            const data = JSON.parse(event.newValue);
+            handleIncomingTelemetry(data);
+          } catch(e) {}
+        }
+      });
+    }
+
+    function handleIncomingTelemetry(data) {
+      if (!data || !data.unitId) return;
+
+      const target = units.find(u => u.id === data.unitId);
+      if (!target) return;
+
+      if (data.lat && data.lng) {
+        target.lat = data.lat;
+        target.lng = data.lng;
+        if (markers[target.id]) {
+          markers[target.id].setLatLng([data.lat, data.lng]);
+        }
+      }
+
+      target.status = data.status || 'ONLINE';
+      target.acc = data.acc ? `±${data.acc}m` : target.acc;
+      target.hdg = data.hdg ? `${data.hdg}°` : target.hdg;
+
+      // DISTRESS SOS LOGIC
+      if (data.distress === true) {
+        target.distress = true;
+        if (!activeDistressSet.has(target.id)) {
+          activeDistressSet.add(target.id);
+          // Play 3-second siren & commando announcement
+          triggerDistressSiren(target.name);
+        }
+      } else if (data.distress === false) {
+        target.distress = false;
+        activeDistressSet.delete(target.id);
+      }
+
+      renderUnits();
     }
   </script>
 </body>
