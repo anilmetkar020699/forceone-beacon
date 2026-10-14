@@ -209,7 +209,7 @@ const BackgroundGeolocation = (window.Capacitor && window.Capacitor.Plugins)
                         backgroundMessage: "Transmitting your position",
                         requestPermissions: true,
                         stale: false,
-                        distanceFilter: 3
+                        distanceFilter: 0
                     },
                     (location, error) => {
                         if (error) {
@@ -274,7 +274,9 @@ const BackgroundGeolocation = (window.Capacitor && window.Capacitor.Plugins)
             const unitRef = database.ref(`commandos/${unitKey}`);
 
             // Registered once: if the connection drops, mark offline and clear distress/audio.
-            unitRef.onDisconnect().update({ status: "OFFLINE", casualty: false, audioActive: false });
+            // unitRef.onDisconnect().update({ status: "OFFLINE", casualty: false, audioActive: false });
+unitRef.onDisconnect().cancel();
+
             database.ref(`webrtc/${unitKey}`).onDisconnect().remove();
 
             try {
