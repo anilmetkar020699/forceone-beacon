@@ -253,7 +253,6 @@
     <!-- Security Authorization Screen with Force One Logo & Design -->
     <div id="authOverlay">
         <div class="auth-card">
-            <!-- Force One Tactical Insignia Logo SVG -->
             <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M50 4L12 18V50C12 73.5 50 96 50 96C50 96 88 73.5 88 50V18L50 4Z" fill="#0f172a" stroke="#38bdf8" stroke-width="3" stroke-linejoin="round"/>
                 <path d="M50 10L18 22V48C18 67 50 86 50 86C50 86 82 67 82 48V22L50 10Z" stroke="#f59e0b" stroke-width="1.8" stroke-linejoin="round"/>
@@ -292,15 +291,10 @@
             </div>
         </div>
         <div class="toolbar-actions">
-            <!-- View Controls -->
             <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
-            
-            <!-- Quick Threat / SITREP Placement Buttons -->
             <button id="btnHostile" class="btn-tool btn-threat" onclick="setQuickMarker('HOSTILE')">🔴 +HOSTILE</button>
             <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
             <button id="btnBreach" class="btn-tool btn-breach" onclick="setQuickMarker('BREACH')">🟢 +BREACH</button>
-            
-            <!-- Operational Tools -->
             <button id="measureBtn" class="btn-tool" onclick="toggleMeasureTool()">📏 MEASURE</button>
             <button id="sirenMuteBtn" class="btn-tool" onclick="toggleSirenMute()">🔔 SIREN: ON</button>
             <button class="btn-tool" onclick="clearSitRepMarkers()">🧹 CLEAR SITREPS</button>
@@ -311,7 +305,6 @@
     <!-- Workspace -->
     <div class="workspace">
         <div id="tacticalMap">
-            <!-- Tactical North Compass HUD & Map Rotating Option -->
             <div class="tactical-compass-hud">
                 <div class="compass-dial-btn" onclick="resetNorth()" title="Click to Reset North (0°)">
                     <svg id="northNeedle" class="compass-needle-svg" viewBox="0 0 100 100" fill="none">
@@ -358,7 +351,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // --- 2. MAP INITIALIZATION (WITH ROTATION SUPPORT) ---
+        // --- 2. MAP INITIALIZATION ---
         const map = L.map('tacticalMap', { 
             zoomControl: false,
             rotate: true,
@@ -386,20 +379,21 @@
         }, null, { position: 'topright' }).addTo(map);
 
         // --- 3. STORAGE & TRACKING STATE ---
-        const markers = {};          // Map markers indexed by unique commando identity
-        const accuracyCircles = {};  // Translucent GPS accuracy bubbles
-        const unitSegments = {};     // Movement path line segments
-        const lastPositions = {};    // Last recorded coordinates [lat, lng]
-        const situationMarkers = []; // Tactical sitrep pins (hostile, breach, etc.)
+        const markers = {};          
+        const accuracyCircles = {};  
+        const unitSegments = {};     
+        const lastPositions = {};    
+        const situationMarkers = []; 
         let latestCasualtyLatLng = null;
+
+        // Tracks commandos seen LIVE in the current logged-in session
+        const sessionActiveUnits = new Set();
 
         let telemetryRef = null;
         let isListening = false;
         
-        // Operations Password
         const DASHBOARD_PASSWORD = "Forceone@123";
 
-        // WebRTC & Audio Settings
         const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
         let activePeerConnection = null;
         let currentListeningUnit = null;
@@ -412,7 +406,6 @@
         const activeCasualties = new Set();
         let isInitialLoad = true;
 
-        // Threat Placement Active State
         let activePlacementType = null;
 
         const groupColors = {
@@ -425,7 +418,6 @@
             "BD": "#7c2d12"
         };
 
-        // Global unlock for browser audio engine
         document.addEventListener('click', () => {
             if (audioCtx && audioCtx.state === 'suspended') {
                 audioCtx.resume();
@@ -505,6 +497,9 @@
                 document.getElementById("authOverlay").style.display = "none";
                 document.getElementById("c2Password").value = "";
 
+                // Reset session active tracking on new login
+                sessionActiveUnits.clear();
+
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
 
@@ -515,29 +510,30 @@
         }
 
         function logoutC2() {
-            // PURGE STALE AND OFFLINE COMMANDOS FROM FIREBASE UPON LOGOUT
+            // 1. Purge all stale and offline commandos from Firebase permanently on logout
             database.ref("commandos").once("value").then((snapshot) => {
                 const data = snapshot.val() || {};
                 const now = Date.now();
                 Object.keys(data).forEach((key) => {
                     const unit = data[key];
                     const isOnline = unit && unit.status === "ONLINE";
-                    const isStale = isOnline && (now - (unit.lastUpdated || 0) > 30000);
-                    if (!isOnline || isStale) {
+                    const isStale = !isOnline || (now - (unit.lastUpdated || 0) > 30000);
+                    if (isStale) {
                         database.ref(`commandos/${key}`).remove();
                         database.ref(`webrtc/${key}`).remove();
                     }
                 });
             }).catch(err => console.warn("Logout purge error:", err));
 
-            // Detach Firebase Listener
+            // 2. Detach Firebase Listener
             if (telemetryRef) {
                 telemetryRef.off();
                 telemetryRef = null;
             }
             isListening = false;
+            sessionActiveUnits.clear();
 
-            // Clear All Commando Markers & Accuracy Bubbles from map
+            // 3. Clear All Commando Markers & Accuracy Bubbles from map
             Object.keys(markers).forEach(key => {
                 if (markers[key]) map.removeLayer(markers[key]);
                 delete markers[key];
@@ -547,7 +543,7 @@
                 delete accuracyCircles[key];
             });
 
-            // Clear All Traveled Path Segments
+            // 4. Clear All Traveled Path Segments
             Object.keys(unitSegments).forEach(key => {
                 if (unitSegments[key]) {
                     unitSegments[key].forEach(seg => map.removeLayer(seg));
@@ -556,10 +552,10 @@
             });
             Object.keys(lastPositions).forEach(key => delete lastPositions[key]);
 
-            // Clear Tactical SitRep Pins
+            // 5. Clear Tactical SitRep Pins
             clearSitRepMarkers();
 
-            // Clear Measurement Line
+            // 6. Clear Measurement Line
             if (measureLine) {
                 map.removeLayer(measureLine);
                 measureLine = null;
@@ -569,10 +565,10 @@
             document.getElementById("measureBtn").classList.remove("active");
             document.getElementById("measureBtn").innerText = "📏 MEASURE";
 
-            // Terminate WebRTC Voice Monitoring
+            // 7. Terminate WebRTC Voice Monitoring
             stopAudioMonitoring();
 
-            // Reset Siren & Alert States
+            // 8. Reset Siren & Alert States
             activeCasualties.clear();
             isInitialLoad = true;
             if (activeSirenOsc) {
@@ -581,17 +577,17 @@
             }
             isSirenPlaying = false;
 
-            // Reset Map Rotation to True North on Logout
+            // 9. Reset Map Rotation to True North on Logout
             resetNorth();
 
-            // Reset Counters and Emergency Notice
+            // 10. Reset Counters and Emergency Notice
             document.getElementById("onlineCount").innerText = "0";
             document.getElementById("casualtyCount").innerText = "0";
             document.getElementById("staleCount").innerText = "0";
             document.getElementById("totalUnitsBadge").innerText = "0 UNITS";
             document.getElementById("casualtyNoticeBar").style.display = "none";
 
-            // Restore Sidebar Visibility
+            // 11. Restore Sidebar Visibility
             const sidebar = document.getElementById("sidebarPanel");
             sidebar.style.display = "flex";
             const btn = document.getElementById("toggleRosterBtn");
@@ -600,18 +596,18 @@
 
             resetPlacementState();
 
-            // Wipe Sidebar Roster
+            // 12. Completely Wipe Dashboard Roster
             document.getElementById("unitList").innerHTML = `
                 <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
                     Session locked. Enter Password to view telemetry.
                 </div>
             `;
 
-            // Display Password Overlay
+            // 13. Display Password Overlay
             document.getElementById("authOverlay").style.display = "flex";
         }
 
-        // --- 7. TELEMETRY & PERSISTENT ACCURACY ENGINE ---
+        // --- 7. TELEMETRY ENGINE ---
         function startListeningTelemetry() {
             if (isListening) return;
             isListening = true;
@@ -629,14 +625,13 @@
 
                 const allKeys = Object.keys(data);
 
-                // STEP 1: DEDUPLICATE BY CALLSIGN (Prevents double entries and blinking/static duplicate bug)
+                // STEP 1: DEDUPLICATE BY CALLSIGN
                 const activeUnits = {};
                 const obsoleteDuplicateKeys = [];
 
                 allKeys.forEach((key) => {
                     const unit = data[key];
                     if (!unit) return;
-                    // Standardize commando unique ID by callsign
                     const commandoId = (unit.callsign && unit.callsign.trim()) 
                         ? unit.callsign.trim().toUpperCase() 
                         : key;
@@ -644,7 +639,6 @@
                     if (!activeUnits[commandoId]) {
                         activeUnits[commandoId] = { key, unit, id: commandoId };
                     } else {
-                        // Compare timestamps: keep newest session, retire ghost session
                         const existingTime = (activeUnits[commandoId].unit && activeUnits[commandoId].unit.lastUpdated) || 0;
                         const newTime = unit.lastUpdated || 0;
 
@@ -657,13 +651,13 @@
                     }
                 });
 
-                // Clean duplicate entries in Firebase in the background
+                // Remove duplicate sessions in the background
                 obsoleteDuplicateKeys.forEach((dupKey) => {
                     database.ref(`commandos/${dupKey}`).remove().catch(() => {});
                     database.ref(`webrtc/${dupKey}`).remove().catch(() => {});
                 });
 
-                // STEP 2: REMOVE MAP LAYERS FOR HARD-DELETED UNITS
+                // STEP 2: REMOVE UNTRACKED UNITS FROM MAP
                 const activeIds = new Set(Object.keys(activeUnits));
                 Object.keys(markers).forEach(id => {
                     if (!activeIds.has(id)) {
@@ -680,17 +674,40 @@
                     }
                 });
 
-                // STEP 3: PROCESS AND DISPLAY DEDUPLICATED UNITS
+                // STEP 3: RENDER UNITS ACCORDING TO SESSION RULES
                 Object.keys(activeUnits).forEach((commandoId) => {
                     const { key, unit } = activeUnits[commandoId];
                     const isOnline = unit && unit.status === "ONLINE";
                     const isCasualty = !!(unit && unit.casualty);
                     const timeDiff = now - ((unit && unit.lastUpdated) || 0);
                     
-                    // Signal is lost if flagged OFFLINE or no ping received for > 30 seconds
-                    const isStale = !isOnline || timeDiff > 30000;
+                    const isLiveNow = isOnline && timeDiff <= 30000;
 
-                    // PERSISTENCE RULE: Signal lost units remain visible until commander logs out
+                    // If commando is live now, register into current mission session
+                    if (isLiveNow) {
+                        sessionActiveUnits.add(commandoId);
+                    }
+
+                    // STRICT FILTER: If unit was NEVER active in this live session, purge it from DB & ignore
+                    if (!sessionActiveUnits.has(commandoId)) {
+                        database.ref(`commandos/${key}`).remove().catch(() => {});
+                        database.ref(`webrtc/${key}`).remove().catch(() => {});
+
+                        // Ensure no lingering marker exists
+                        if (markers[commandoId]) {
+                            map.removeLayer(markers[commandoId]);
+                            delete markers[commandoId];
+                        }
+                        if (accuracyCircles[commandoId]) {
+                            map.removeLayer(accuracyCircles[commandoId]);
+                            delete accuracyCircles[commandoId];
+                        }
+                        return;
+                    }
+
+                    // Commando was seen in this session: check if signal is lost
+                    const isStale = !isLiveNow;
+
                     if (isStale) {
                         staleCount++;
                     } else {
@@ -711,7 +728,7 @@
                         activeCasualties.delete(commandoId);
                     }
 
-                    // --- POSITION PLOTTING (PRESERVES LAST KNOWN POSITION DURING SIGNAL LOSS) ---
+                    // --- PLOT ON MAP (Retains last coordinates if signal lost) ---
                     if (unit.lat && unit.lng) {
                         const latLng = [unit.lat, unit.lng];
                         const accRadius = Math.max(unit.accuracy || 5, 2);
@@ -724,7 +741,7 @@
                             markerColor = "var(--accent-red)";
                         } else if (isStale) {
                             markerClass = "marker-stale";
-                            markerColor = "#64748b"; // Dimmed grey for lost signal
+                            markerColor = "#64748b";
                         }
 
                         let statusText = 'ONLINE';
@@ -734,7 +751,7 @@
                         const callsignLabel = unit.callsign || key;
                         const initials = callsignLabel.substring(0, 2).toUpperCase();
 
-                        // 1. Commando Marker
+                        // Marker Pin
                         const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${initials}</div>`;
                         const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] });
 
@@ -747,7 +764,7 @@
                             markers[commandoId].getPopup().setContent(`<strong>${callsignLabel}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m<br>Last Seen: ${Math.round(timeDiff / 1000)}s ago`);
                         }
 
-                        // 2. High-Accuracy Uncertainty Bubble (dimmed if signal lost)
+                        // Uncertainty Circle
                         const bubbleColor = isCasualty ? '#ef4444' : (isStale ? '#f59e0b' : '#38bdf8');
                         const bubbleOpacity = isStale ? 0.05 : 0.12;
 
@@ -769,7 +786,7 @@
                             });
                         }
 
-                        // 3. Movement Path Segments
+                        // Movement Line Segments
                         if (!unitSegments[commandoId]) unitSegments[commandoId] = [];
 
                         if (lastPositions[commandoId]) {
@@ -802,7 +819,7 @@
                         }
                     }
 
-                    // 4. Sidebar Roster Card
+                    // --- SIDEBAR ROSTER CARD ---
                     const card = document.createElement("div");
                     let cardClass = "unit-card";
                     if (isCasualty) cardClass += " casualty";
@@ -933,7 +950,7 @@
             }
         }
 
-        // --- 9. CASUALTY AUDIO INTERCEPT (WebRTC STREAMING) ---
+        // --- 9. CASUALTY AUDIO INTERCEPT ---
         async function toggleAudioListen(unitKey) {
             const player = document.getElementById("remoteAudioPlayer");
 
