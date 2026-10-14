@@ -405,6 +405,8 @@
         let isListening = false;
         let latestTelemetryData = {};
         let staleCheckInterval = null;
+        let sessionTimeoutTimer = null;
+        const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes inactivity timeout
         
         // Operations Password
         const DASHBOARD_PASSWORD = "Forceone@123";
@@ -509,6 +511,22 @@
         }
 
         // --- 6. AUTHENTICATION & SESSION LOGOUT SANITIZATION ---
+        function resetSessionTimeout() {
+            if (sessionTimeoutTimer) clearTimeout(sessionTimeoutTimer);
+            if (isListening) {
+                sessionTimeoutTimer = setTimeout(() => {
+                    alert("TACTICAL SESSION EXPIRED: Live session timeout reached. Data cleared.");
+                    logoutC2();
+                }, SESSION_TIMEOUT_MS);
+            }
+        }
+
+        ['click', 'mousemove', 'keydown', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (isListening) resetSessionTimeout();
+            }, { passive: true });
+        });
+
         function verifyAccess() {
             const enteredPassword = document.getElementById("c2Password").value;
             if (enteredPassword === DASHBOARD_PASSWORD) {
@@ -518,6 +536,22 @@
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
 
+                resetSessionTimeout();
+
+                // Clean out any stale ghost records left over from previous sessions
+                const now = Date.now();
+                database.ref("commandos").once("value").then((snapshot) => {
+                    const data = snapshot.val() || {};
+                    Object.keys(data).forEach((key) => {
+                        const unit = data[key];
+                        const timeDiff = now - ((unit && unit.lastUpdated) || 0);
+                        if (!unit || unit.status !== "ONLINE" || timeDiff > 35000) {
+                            database.ref(`commandos/${key}`).remove();
+                            database.ref(`webrtc/${key}`).remove();
+                        }
+                    });
+                }).catch(err => console.warn("Session init cleanup error:", err));
+
                 startListeningTelemetry();
             } else {
                 alert("ACCESS DENIED: Invalid Tactical Password");
@@ -525,25 +559,18 @@
         }
 
         function logoutC2() {
+            if (sessionTimeoutTimer) {
+                clearTimeout(sessionTimeoutTimer);
+                sessionTimeoutTimer = null;
+            }
             if (staleCheckInterval) {
                 clearInterval(staleCheckInterval);
                 staleCheckInterval = null;
             }
 
-            // 1. Purge ONLY the commandos whose GPS signal was lost when logging out
-            database.ref("commandos").once("value").then((snapshot) => {
-                const data = snapshot.val() || {};
-                const now = Date.now();
-                Object.keys(data).forEach((key) => {
-                    const unit = data[key];
-                    const isOnline = unit && unit.status === "ONLINE";
-                    const isSignalLost = !isOnline || (now - (unit.lastUpdated || 0) > 35000);
-                    if (isSignalLost) {
-                        database.ref(`commandos/${key}`).remove();
-                        database.ref(`webrtc/${key}`).remove();
-                    }
-                });
-            }).catch(err => console.warn("Logout purge error:", err));
+            // 1. Wipe all commando and WebRTC data from Firebase on logout or session expiry
+            database.ref("commandos").remove().catch(err => console.warn("Logout purge error:", err));
+            database.ref("webrtc").remove().catch(err => console.warn("Logout webrtc purge error:", err));
 
             // 2. Detach Firebase Listener
             if (telemetryRef) {
