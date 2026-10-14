@@ -169,8 +169,8 @@
         .unit-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; cursor: pointer; transition: 0.2s; }
         .unit-card:hover { border-color: var(--accent-blue); }
         .unit-card.casualty { border: 2px solid var(--accent-red); background: #3b0764; animation: pulseRed 1.5s infinite; }
-        .unit-card.stale { border-color: var(--accent-yellow); }
-        .unit-card.offline { opacity: 0.55; }
+        .unit-card.stale { border-color: var(--accent-yellow); background: #1c1917; }
+        .unit-card.offline { opacity: 0.65; border-color: #475569; }
 
         @keyframes pulseRed {
             0%, 100% { border-color: var(--accent-red); }
@@ -206,6 +206,11 @@
         .commando-marker.marker-casualty { 
             background: var(--accent-red) !important; 
             animation: pulseRed 1s infinite; 
+        }
+        .commando-marker.marker-stale {
+            opacity: 0.75;
+            border: 2px dashed var(--accent-yellow) !important;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
         }
 
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
@@ -262,15 +267,10 @@
                 <path d="M50 74L51.8 78.5L56.5 78.5L52.7 81.2L54.2 85.5L50 83L45.8 85.5L47.3 81.2L43.5 78.5L48.2 78.5L50 74Z" fill="#f59e0b"/>
             </svg>
 
-            <!-- Large Welcome Text -->
             <div class="auth-welcome-title">WELCOME</div>
-            <!-- Subtitle -->
             <div class="auth-subtitle">COMMANDO TRACKING SYSTEM</div>
 
-            <!-- Password Input Field -->
             <input type="password" id="c2Password" placeholder="Enter Password" onkeydown="if(event.key==='Enter') verifyAccess()">
-            
-            <!-- Login Button -->
             <button onclick="verifyAccess()">LOGIN</button>
         </div>
     </div>
@@ -315,13 +315,9 @@
             <div class="tactical-compass-hud">
                 <div class="compass-dial-btn" onclick="resetNorth()" title="Click to Reset North (0°)">
                     <svg id="northNeedle" class="compass-needle-svg" viewBox="0 0 100 100" fill="none">
-                        <!-- North Needle (Red Arrow) -->
                         <polygon points="50,6 61,48 50,40 39,48" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
-                        <!-- South Needle (Silver) -->
                         <polygon points="50,94 61,52 50,60 39,52" fill="#64748b" stroke="#ffffff" stroke-width="1.5" />
-                        <!-- Compass Pivot Center -->
                         <circle cx="50" cy="50" r="4.5" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5" />
-                        <!-- Cardinal 'N' Letter -->
                         <text x="50" y="22" fill="#ffffff" font-size="10" font-weight="900" text-anchor="middle" font-family="monospace">N</text>
                     </svg>
                 </div>
@@ -390,7 +386,7 @@
         }, null, { position: 'topright' }).addTo(map);
 
         // --- 3. STORAGE & TRACKING STATE ---
-        const markers = {};          // Map markers for active commandos
+        const markers = {};          // Map markers indexed by unique commando identity
         const accuracyCircles = {};  // Translucent GPS accuracy bubbles
         const unitSegments = {};     // Movement path line segments
         const lastPositions = {};    // Last recorded coordinates [lat, lng]
@@ -443,7 +439,6 @@
             const label = document.getElementById("bearingDisplay");
             
             if (needle) {
-                // When map rotates +X deg, True North rotates -X deg to point upwards to North
                 needle.style.transform = `rotate(${-normalized}deg)`;
             }
 
@@ -461,7 +456,6 @@
             }
         }
 
-        // Listen for rotation events from touch/drag
         map.on('rotate', () => {
             if (typeof map.getBearing === 'function') {
                 updateNorthCompass(map.getBearing());
@@ -521,7 +515,7 @@
         }
 
         function logoutC2() {
-            // 1. Purge stale and offline commandos from Firebase so they do NOT persist into the next login
+            // PURGE STALE AND OFFLINE COMMANDOS FROM FIREBASE UPON LOGOUT
             database.ref("commandos").once("value").then((snapshot) => {
                 const data = snapshot.val() || {};
                 const now = Date.now();
@@ -536,14 +530,14 @@
                 });
             }).catch(err => console.warn("Logout purge error:", err));
 
-            // 2. Detach Firebase Listener
+            // Detach Firebase Listener
             if (telemetryRef) {
                 telemetryRef.off();
                 telemetryRef = null;
             }
             isListening = false;
 
-            // 3. Clear All Commando Markers & Accuracy Bubbles from map
+            // Clear All Commando Markers & Accuracy Bubbles from map
             Object.keys(markers).forEach(key => {
                 if (markers[key]) map.removeLayer(markers[key]);
                 delete markers[key];
@@ -553,7 +547,7 @@
                 delete accuracyCircles[key];
             });
 
-            // 4. Clear All Traveled Path Segments
+            // Clear All Traveled Path Segments
             Object.keys(unitSegments).forEach(key => {
                 if (unitSegments[key]) {
                     unitSegments[key].forEach(seg => map.removeLayer(seg));
@@ -562,10 +556,10 @@
             });
             Object.keys(lastPositions).forEach(key => delete lastPositions[key]);
 
-            // 5. Clear Tactical SitRep Pins
+            // Clear Tactical SitRep Pins
             clearSitRepMarkers();
 
-            // 6. Clear Measurement Line
+            // Clear Measurement Line
             if (measureLine) {
                 map.removeLayer(measureLine);
                 measureLine = null;
@@ -575,10 +569,10 @@
             document.getElementById("measureBtn").classList.remove("active");
             document.getElementById("measureBtn").innerText = "📏 MEASURE";
 
-            // 7. Terminate WebRTC Voice Monitoring
+            // Terminate WebRTC Voice Monitoring
             stopAudioMonitoring();
 
-            // 8. Reset Siren & Alert States
+            // Reset Siren & Alert States
             activeCasualties.clear();
             isInitialLoad = true;
             if (activeSirenOsc) {
@@ -587,34 +581,33 @@
             }
             isSirenPlaying = false;
 
-            // 9. Reset Map Rotation to True North on Logout
+            // Reset Map Rotation to True North on Logout
             resetNorth();
 
-            // 10. Reset Counters and Emergency Notice
+            // Reset Counters and Emergency Notice
             document.getElementById("onlineCount").innerText = "0";
             document.getElementById("casualtyCount").innerText = "0";
             document.getElementById("staleCount").innerText = "0";
             document.getElementById("totalUnitsBadge").innerText = "0 UNITS";
             document.getElementById("casualtyNoticeBar").style.display = "none";
 
-            // 11. Restore Sidebar Visibility
+            // Restore Sidebar Visibility
             const sidebar = document.getElementById("sidebarPanel");
             sidebar.style.display = "flex";
             const btn = document.getElementById("toggleRosterBtn");
             btn.innerText = "👁️ HIDE ROSTER";
             btn.classList.add("active");
 
-            // 12. Reset Placement Buttons
             resetPlacementState();
 
-            // 13. Wipe Sidebar Roster
+            // Wipe Sidebar Roster
             document.getElementById("unitList").innerHTML = `
                 <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
                     Session locked. Enter Password to view telemetry.
                 </div>
             `;
 
-            // 14. Display Password Overlay
+            // Display Password Overlay
             document.getElementById("authOverlay").style.display = "flex";
         }
 
@@ -636,75 +629,89 @@
 
                 const allKeys = Object.keys(data);
 
-                // Clean up removed units from map
-                const currentKeys = new Set(allKeys);
-                Object.keys(markers).forEach(k => {
-                    if (!currentKeys.has(k)) {
-                        map.removeLayer(markers[k]);
-                        delete markers[k];
-                        if (accuracyCircles[k]) {
-                            map.removeLayer(accuracyCircles[k]);
-                            delete accuracyCircles[k];
-                        }
-                        if (unitSegments[k]) {
-                            unitSegments[k].forEach(seg => map.removeLayer(seg));
-                            delete unitSegments[k];
-                        }
-                        delete lastPositions[k];
-                        activeCasualties.delete(k);
-                    }
-                });
+                // STEP 1: DEDUPLICATE BY CALLSIGN (Prevents double entries and blinking/static duplicate bug)
+                const activeUnits = {};
+                const obsoleteDuplicateKeys = [];
 
                 allKeys.forEach((key) => {
                     const unit = data[key];
+                    if (!unit) return;
+                    // Standardize commando unique ID by callsign
+                    const commandoId = (unit.callsign && unit.callsign.trim()) 
+                        ? unit.callsign.trim().toUpperCase() 
+                        : key;
+
+                    if (!activeUnits[commandoId]) {
+                        activeUnits[commandoId] = { key, unit, id: commandoId };
+                    } else {
+                        // Compare timestamps: keep newest session, retire ghost session
+                        const existingTime = (activeUnits[commandoId].unit && activeUnits[commandoId].unit.lastUpdated) || 0;
+                        const newTime = unit.lastUpdated || 0;
+
+                        if (newTime >= existingTime) {
+                            obsoleteDuplicateKeys.push(activeUnits[commandoId].key);
+                            activeUnits[commandoId] = { key, unit, id: commandoId };
+                        } else {
+                            obsoleteDuplicateKeys.push(key);
+                        }
+                    }
+                });
+
+                // Clean duplicate entries in Firebase in the background
+                obsoleteDuplicateKeys.forEach((dupKey) => {
+                    database.ref(`commandos/${dupKey}`).remove().catch(() => {});
+                    database.ref(`webrtc/${dupKey}`).remove().catch(() => {});
+                });
+
+                // STEP 2: REMOVE MAP LAYERS FOR HARD-DELETED UNITS
+                const activeIds = new Set(Object.keys(activeUnits));
+                Object.keys(markers).forEach(id => {
+                    if (!activeIds.has(id)) {
+                        if (markers[id]) map.removeLayer(markers[id]);
+                        delete markers[id];
+                        if (accuracyCircles[id]) map.removeLayer(accuracyCircles[id]);
+                        delete accuracyCircles[id];
+                        if (unitSegments[id]) {
+                            unitSegments[id].forEach(seg => map.removeLayer(seg));
+                            delete unitSegments[id];
+                        }
+                        delete lastPositions[id];
+                        activeCasualties.delete(id);
+                    }
+                });
+
+                // STEP 3: PROCESS AND DISPLAY DEDUPLICATED UNITS
+                Object.keys(activeUnits).forEach((commandoId) => {
+                    const { key, unit } = activeUnits[commandoId];
                     const isOnline = unit && unit.status === "ONLINE";
                     const isCasualty = !!(unit && unit.casualty);
                     const timeDiff = now - ((unit && unit.lastUpdated) || 0);
-                    const isStale = isOnline && timeDiff > 30000;
+                    
+                    // Signal is lost if flagged OFFLINE or no ping received for > 30 seconds
+                    const isStale = !isOnline || timeDiff > 30000;
 
-                    // WIPE STALE AND OFFLINE COMMANDOS FROM MAP & DATABASE
-                    if (!isOnline || isStale) {
-                        if (markers[key]) {
-                            map.removeLayer(markers[key]);
-                            delete markers[key];
-                        }
-                        if (accuracyCircles[key]) {
-                            map.removeLayer(accuracyCircles[key]);
-                            delete accuracyCircles[key];
-                        }
-                        if (unitSegments[key]) {
-                            unitSegments[key].forEach(seg => map.removeLayer(seg));
-                            delete unitSegments[key];
-                        }
-                        delete lastPositions[key];
-                        activeCasualties.delete(key);
-
-                        // Auto-wipe from Firebase so stale/offline ghosts never persist
-                        database.ref(`commandos/${key}`).remove();
-                        database.ref(`webrtc/${key}`).remove();
-                        return; // Omit from dashboard roster and active counts
+                    // PERSISTENCE RULE: Signal lost units remain visible until commander logs out
+                    if (isStale) {
+                        staleCount++;
+                    } else {
+                        onlineCount++;
                     }
 
-                    // Active online commando
-                    onlineCount++;
-                    
                     if (isCasualty) {
                         casualtyCount++;
                         latestCasualtyLatLng = [unit.lat, unit.lng];
 
-                        // Trigger siren strictly when a unit newly signals distress
-                        if (!activeCasualties.has(key)) {
-                            activeCasualties.add(key);
+                        if (!activeCasualties.has(commandoId)) {
+                            activeCasualties.add(commandoId);
                             if (!isInitialLoad && !isSirenMuted) {
                                 playDistressSiren();
                             }
                         }
                     } else {
-                        // Distress cleared or acknowledged
-                        activeCasualties.delete(key);
+                        activeCasualties.delete(commandoId);
                     }
 
-                    // --- POSITION PLOTTING (ACTIVE UNITS ONLY) ---
+                    // --- POSITION PLOTTING (PRESERVES LAST KNOWN POSITION DURING SIGNAL LOSS) ---
                     if (unit.lat && unit.lng) {
                         const latLng = [unit.lat, unit.lng];
                         const accRadius = Math.max(unit.accuracy || 5, 2);
@@ -715,79 +722,93 @@
                         if (isCasualty) {
                             markerClass = "marker-casualty";
                             markerColor = "var(--accent-red)";
+                        } else if (isStale) {
+                            markerClass = "marker-stale";
+                            markerColor = "#64748b"; // Dimmed grey for lost signal
                         }
 
-                        const statusText = isCasualty ? 'CASUALTY' : 'ONLINE';
+                        let statusText = 'ONLINE';
+                        if (isCasualty) statusText = 'CASUALTY';
+                        else if (isStale) statusText = 'SIGNAL LOST (LAST KNOWN)';
+
+                        const callsignLabel = unit.callsign || key;
+                        const initials = callsignLabel.substring(0, 2).toUpperCase();
 
                         // 1. Commando Marker
-                        if (!markers[key]) {
-                            const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
-                            const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] });
-                            markers[key] = L.marker(latLng, { icon: icon }).addTo(map);
-                            markers[key].bindPopup(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
+                        const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${initials}</div>`;
+                        const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] });
+
+                        if (!markers[commandoId]) {
+                            markers[commandoId] = L.marker(latLng, { icon: icon }).addTo(map);
+                            markers[commandoId].bindPopup(`<strong>${callsignLabel}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m<br>Last Seen: ${Math.round(timeDiff / 1000)}s ago`);
                         } else {
-                            markers[key].setLatLng(latLng);
-                            const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
-                            markers[key].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }));
-                            markers[key].getPopup().setContent(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
+                            markers[commandoId].setLatLng(latLng);
+                            markers[commandoId].setIcon(icon);
+                            markers[commandoId].getPopup().setContent(`<strong>${callsignLabel}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m<br>Last Seen: ${Math.round(timeDiff / 1000)}s ago`);
                         }
 
-                        // 2. High-Accuracy Uncertainty Bubble
-                        const bubbleColor = isCasualty ? '#ef4444' : '#38bdf8';
-                        if (!accuracyCircles[key]) {
-                            accuracyCircles[key] = L.circle(latLng, {
+                        // 2. High-Accuracy Uncertainty Bubble (dimmed if signal lost)
+                        const bubbleColor = isCasualty ? '#ef4444' : (isStale ? '#f59e0b' : '#38bdf8');
+                        const bubbleOpacity = isStale ? 0.05 : 0.12;
+
+                        if (!accuracyCircles[commandoId]) {
+                            accuracyCircles[commandoId] = L.circle(latLng, {
                                 radius: accRadius,
                                 color: bubbleColor,
                                 weight: 1,
-                                fillOpacity: 0.12,
+                                fillOpacity: bubbleOpacity,
                                 fillColor: bubbleColor
                             }).addTo(map);
                         } else {
-                            accuracyCircles[key].setLatLng(latLng);
-                            accuracyCircles[key].setRadius(accRadius);
-                            accuracyCircles[key].setStyle({
+                            accuracyCircles[commandoId].setLatLng(latLng);
+                            accuracyCircles[commandoId].setRadius(accRadius);
+                            accuracyCircles[commandoId].setStyle({
                                 color: bubbleColor,
                                 fillColor: bubbleColor,
-                                fillOpacity: 0.12
+                                fillOpacity: bubbleOpacity
                             });
                         }
 
                         // 3. Movement Path Segments
-                        if (!unitSegments[key]) unitSegments[key] = [];
+                        if (!unitSegments[commandoId]) unitSegments[commandoId] = [];
 
-                        if (lastPositions[key]) {
-                            const prevLatLng = lastPositions[key];
+                        if (lastPositions[commandoId]) {
+                            const prevLatLng = lastPositions[commandoId];
                             const distanceMoved = map.distance(prevLatLng, latLng);
                             const minMoveThreshold = Math.max(2.5, accRadius * 0.4);
 
                             if (distanceMoved >= minMoveThreshold) {
-                                const segmentColor = isCasualty ? '#ef4444' : '#38bdf8';
-                                const isDashed = isCasualty ? '5, 5' : null;
+                                const segmentColor = isCasualty ? '#ef4444' : (isStale ? '#94a3b8' : '#38bdf8');
+                                const isDashed = isCasualty ? '5, 5' : (isStale ? '3, 6' : null);
 
                                 const segment = L.polyline([prevLatLng, latLng], {
                                     color: segmentColor,
                                     weight: 3.5,
-                                    opacity: 0.85,
+                                    opacity: isStale ? 0.45 : 0.85,
                                     dashArray: isDashed
                                 }).addTo(map);
 
-                                unitSegments[key].push(segment);
+                                unitSegments[commandoId].push(segment);
 
-                                if (unitSegments[key].length > 50) {
-                                    const oldestSegment = unitSegments[key].shift();
+                                if (unitSegments[commandoId].length > 50) {
+                                    const oldestSegment = unitSegments[commandoId].shift();
                                     map.removeLayer(oldestSegment);
                                 }
 
-                                lastPositions[key] = latLng;
+                                lastPositions[commandoId] = latLng;
                             }
                         } else {
-                            lastPositions[key] = latLng;
+                            lastPositions[commandoId] = latLng;
                         }
                     }
 
-                    // 4. Sidebar Roster Card (Cleaned, No LaTeX artifact)
+                    // 4. Sidebar Roster Card
                     const card = document.createElement("div");
-                    card.className = `unit-card ${isCasualty ? 'casualty' : ''}`;
+                    let cardClass = "unit-card";
+                    if (isCasualty) cardClass += " casualty";
+                    else if (isStale) cardClass += " stale";
+
+                    card.className = cardClass;
                     card.onclick = () => { 
                         if (unit.lat && unit.lng) {
                             map.setView([unit.lat, unit.lng], 17);
@@ -798,12 +819,22 @@
                     };
 
                     const headingDeg = Math.round(unit.heading || 0);
+                    let statusLabelColor = 'var(--accent-green)';
+                    let statusLabelText = '● ONLINE';
+
+                    if (isCasualty) {
+                        statusLabelColor = 'var(--accent-red)';
+                        statusLabelText = '🚨 CASUALTY';
+                    } else if (isStale) {
+                        statusLabelColor = 'var(--accent-yellow)';
+                        statusLabelText = `⚠️ SIGNAL LOST (${Math.round(timeDiff / 1000)}s)`;
+                    }
 
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <strong>${unit.callsign || key}</strong>
-                            <span style="font-size:0.75rem; color:${isCasualty ? 'var(--accent-red)' : 'var(--accent-green)'}">
-                                ${isCasualty ? '🚨 CASUALTY' : '● ONLINE'}
+                            <span style="font-size:0.75rem; color:${statusLabelColor}">
+                                ${statusLabelText}
                             </span>
                         </div>
                         <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
@@ -821,11 +852,10 @@
 
                 document.getElementById("onlineCount").innerText = onlineCount;
                 document.getElementById("casualtyCount").innerText = casualtyCount;
-                document.getElementById("staleCount").innerText = 0;
-                document.getElementById("totalUnitsBadge").innerText = `${onlineCount} UNITS`;
+                document.getElementById("staleCount").innerText = staleCount;
+                document.getElementById("totalUnitsBadge").innerText = `${onlineCount + staleCount} UNITS`;
                 document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
 
-                // Mark initialization complete
                 isInitialLoad = false;
             });
         }
