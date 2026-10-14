@@ -169,7 +169,7 @@
         .unit-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; cursor: pointer; transition: 0.2s; }
         .unit-card:hover { border-color: var(--accent-blue); }
         .unit-card.casualty { border: 2px solid var(--accent-red); background: #3b0764; animation: pulseRed 1.5s infinite; }
-        .unit-card.stale { border-color: var(--accent-yellow); }
+        .unit-card.stale { border: 1px solid var(--accent-yellow); background: #1c1917; }
         .unit-card.offline { opacity: 0.55; }
 
         @keyframes pulseRed {
@@ -206,6 +206,10 @@
         .commando-marker.marker-casualty { 
             background: var(--accent-red) !important; 
             animation: pulseRed 1s infinite; 
+        }
+        .commando-marker.marker-stale { 
+            border-color: var(--accent-yellow) !important; 
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.7); 
         }
 
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
@@ -288,7 +292,7 @@
             <div class="stat-badges">
                 <div class="badge" style="color:var(--accent-green);">ONLINE: <span id="onlineCount">0</span></div>
                 <div class="badge" style="color:var(--accent-red);">CASUALTIES: <span id="casualtyCount">0</span></div>
-                <div class="badge" style="color:var(--accent-yellow);">STALE: <span id="staleCount">0</span></div>
+                <div class="badge" style="color:var(--accent-yellow);">SIGNAL LOST: <span id="staleCount">0</span></div>
             </div>
         </div>
         <div class="toolbar-actions">
@@ -399,6 +403,8 @@
 
         let telemetryRef = null;
         let isListening = false;
+        let latestTelemetryData = {};
+        let staleCheckInterval = null;
         
         // Operations Password
         const DASHBOARD_PASSWORD = "Forceone@123";
@@ -443,7 +449,6 @@
             const label = document.getElementById("bearingDisplay");
             
             if (needle) {
-                // When map rotates +X deg, True North rotates -X deg to point upwards to North
                 needle.style.transform = `rotate(${-normalized}deg)`;
             }
 
@@ -461,7 +466,6 @@
             }
         }
 
-        // Listen for rotation events from touch/drag
         map.on('rotate', () => {
             if (typeof map.getBearing === 'function') {
                 updateNorthCompass(map.getBearing());
@@ -521,15 +525,20 @@
         }
 
         function logoutC2() {
-            // 1. Purge stale and offline commandos from Firebase so they do NOT persist into the next login
+            if (staleCheckInterval) {
+                clearInterval(staleCheckInterval);
+                staleCheckInterval = null;
+            }
+
+            // 1. Purge ONLY the commandos whose GPS signal was lost when logging out
             database.ref("commandos").once("value").then((snapshot) => {
                 const data = snapshot.val() || {};
                 const now = Date.now();
                 Object.keys(data).forEach((key) => {
                     const unit = data[key];
                     const isOnline = unit && unit.status === "ONLINE";
-                    const isStale = isOnline && (now - (unit.lastUpdated || 0) > 30000);
-                    if (!isOnline || isStale) {
+                    const isSignalLost = !isOnline || (now - (unit.lastUpdated || 0) > 35000);
+                    if (isSignalLost) {
                         database.ref(`commandos/${key}`).remove();
                         database.ref(`webrtc/${key}`).remove();
                     }
@@ -542,6 +551,7 @@
                 telemetryRef = null;
             }
             isListening = false;
+            latestTelemetryData = {};
 
             // 3. Clear All Commando Markers & Accuracy Bubbles from map
             Object.keys(markers).forEach(key => {
@@ -625,209 +635,249 @@
 
             telemetryRef = database.ref("commandos");
             telemetryRef.on("value", (snapshot) => {
-                const data = snapshot.val() || {};
-                const now = Date.now();
+                latestTelemetryData = snapshot.val() || {};
+                renderDashboard(latestTelemetryData);
+            });
 
-                let onlineCount = 0;
-                let casualtyCount = 0;
-                let staleCount = 0;
-                const unitListEl = document.getElementById("unitList");
-                unitListEl.innerHTML = "";
+            // Periodic heartbeat check every 5 seconds to update timers and lost-signal state
+            if (staleCheckInterval) clearInterval(staleCheckInterval);
+            staleCheckInterval = setInterval(() => {
+                if (isListening && latestTelemetryData) {
+                    renderDashboard(latestTelemetryData);
+                }
+            }, 5000);
+        }
 
-                const allKeys = Object.keys(data);
+        function cleanUnitLayers(k) {
+            if (markers[k]) {
+                map.removeLayer(markers[k]);
+                delete markers[k];
+            }
+            if (accuracyCircles[k]) {
+                map.removeLayer(accuracyCircles[k]);
+                delete accuracyCircles[k];
+            }
+            if (unitSegments[k]) {
+                unitSegments[k].forEach(seg => map.removeLayer(seg));
+                delete unitSegments[k];
+            }
+            delete lastPositions[k];
+            activeCasualties.delete(k);
+        }
 
-                // Clean up removed units from map
-                const currentKeys = new Set(allKeys);
-                Object.keys(markers).forEach(k => {
-                    if (!currentKeys.has(k)) {
-                        map.removeLayer(markers[k]);
-                        delete markers[k];
-                        if (accuracyCircles[k]) {
-                            map.removeLayer(accuracyCircles[k]);
-                            delete accuracyCircles[k];
-                        }
-                        if (unitSegments[k]) {
-                            unitSegments[k].forEach(seg => map.removeLayer(seg));
-                            delete unitSegments[k];
-                        }
-                        delete lastPositions[k];
-                        activeCasualties.delete(k);
-                    }
-                });
+        function renderDashboard(data) {
+            const now = Date.now();
+            let onlineCount = 0;
+            let casualtyCount = 0;
+            let staleCount = 0;
+            const unitListEl = document.getElementById("unitList");
+            unitListEl.innerHTML = "";
 
-                allKeys.forEach((key) => {
-                    const unit = data[key];
-                    const isOnline = unit && unit.status === "ONLINE";
-                    const isCasualty = !!(unit && unit.casualty);
-                    const timeDiff = now - ((unit && unit.lastUpdated) || 0);
-                    const isStale = isOnline && timeDiff > 30000;
+            const allKeys = Object.keys(data);
 
-                    // WIPE STALE AND OFFLINE COMMANDOS FROM MAP & DATABASE
-                    if (!isOnline || isStale) {
-                        if (markers[key]) {
-                            map.removeLayer(markers[key]);
-                            delete markers[key];
-                        }
-                        if (accuracyCircles[key]) {
-                            map.removeLayer(accuracyCircles[key]);
-                            delete accuracyCircles[key];
-                        }
-                        if (unitSegments[key]) {
-                            unitSegments[key].forEach(seg => map.removeLayer(seg));
-                            delete unitSegments[key];
-                        }
-                        delete lastPositions[key];
-                        activeCasualties.delete(key);
+            // Deduplicate by normalized callsign to eliminate double entries
+            const deduplicatedUnits = {};
+            allKeys.forEach((key) => {
+                const unit = data[key];
+                if (!unit) return;
+                const normName = (unit.callsign || key).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (!normName) return;
 
-                        // Auto-wipe from Firebase so stale/offline ghosts never persist
+                if (!deduplicatedUnits[normName]) {
+                    deduplicatedUnits[normName] = { key, unit };
+                } else {
+                    const existing = deduplicatedUnits[normName];
+                    const existingTime = existing.unit.lastUpdated || 0;
+                    const thisTime = unit.lastUpdated || 0;
+
+                    if (thisTime > existingTime) {
+                        cleanUnitLayers(existing.key);
+                        database.ref(`commandos/${existing.key}`).remove();
+                        deduplicatedUnits[normName] = { key, unit };
+                    } else {
+                        cleanUnitLayers(key);
                         database.ref(`commandos/${key}`).remove();
-                        database.ref(`webrtc/${key}`).remove();
-                        return; // Omit from dashboard roster and active counts
                     }
+                }
+            });
 
-                    // Active online commando
-                    onlineCount++;
+            // Clean up removed units from map
+            const activeKeys = new Set(Object.values(deduplicatedUnits).map(item => item.key));
+            Object.keys(markers).forEach(k => {
+                if (!activeKeys.has(k)) {
+                    cleanUnitLayers(k);
+                }
+            });
+
+            Object.values(deduplicatedUnits).forEach(({ key, unit }) => {
+                const isOnlineStatus = unit && unit.status === "ONLINE";
+                const isCasualty = !!(unit && unit.casualty);
+                const timeDiff = now - ((unit && unit.lastUpdated) || 0);
+
+                // Threshold: If no update for 35s, mark signal lost without wiping
+                const isSignalLost = !isOnlineStatus || timeDiff > 35000;
+                const isOnline = isOnlineStatus && !isSignalLost;
+
+                if (isCasualty) {
+                    casualtyCount++;
+                    latestCasualtyLatLng = [unit.lat, unit.lng];
+
+                    if (!activeCasualties.has(key)) {
+                        activeCasualties.add(key);
+                        if (!isInitialLoad && !isSirenMuted) {
+                            playDistressSiren();
+                        }
+                    }
+                } else {
+                    activeCasualties.delete(key);
+                    if (isOnline) {
+                        onlineCount++;
+                    } else if (isSignalLost) {
+                        staleCount++;
+                    }
+                }
+
+                // Plot unit location (remains visible even when signal is lost)
+                if (unit.lat && unit.lng) {
+                    const latLng = [unit.lat, unit.lng];
+                    const accRadius = Math.max(unit.accuracy || 5, 2);
+
+                    let markerColor = groupColors[unit.group] || "#0284c7";
+                    let markerClass = "";
                     
                     if (isCasualty) {
-                        casualtyCount++;
-                        latestCasualtyLatLng = [unit.lat, unit.lng];
-
-                        // Trigger siren strictly when a unit newly signals distress
-                        if (!activeCasualties.has(key)) {
-                            activeCasualties.add(key);
-                            if (!isInitialLoad && !isSirenMuted) {
-                                playDistressSiren();
-                            }
-                        }
-                    } else {
-                        // Distress cleared or acknowledged
-                        activeCasualties.delete(key);
+                        markerClass = "marker-casualty";
+                        markerColor = "var(--accent-red)";
+                    } else if (isSignalLost) {
+                        markerClass = "marker-stale";
+                        markerColor = "var(--accent-yellow)";
                     }
 
-                    // --- POSITION PLOTTING (ACTIVE UNITS ONLY) ---
-                    if (unit.lat && unit.lng) {
-                        const latLng = [unit.lat, unit.lng];
-                        const accRadius = Math.max(unit.accuracy || 5, 2);
+                    let statusText = 'ONLINE';
+                    if (isCasualty) statusText = 'CASUALTY';
+                    else if (isSignalLost) statusText = 'SIGNAL LOST (LAST KNOWN)';
 
-                        let markerColor = groupColors[unit.group] || "#0284c7";
-                        let markerClass = "";
-                        
-                        if (isCasualty) {
-                            markerClass = "marker-casualty";
-                            markerColor = "var(--accent-red)";
-                        }
+                    // 1. Commando Marker
+                    if (!markers[key]) {
+                        const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
+                        const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] });
+                        markers[key] = L.marker(latLng, { icon: icon }).addTo(map);
+                        markers[key].bindPopup(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
+                    } else {
+                        markers[key].setLatLng(latLng);
+                        const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
+                        markers[key].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }));
+                        markers[key].getPopup().setContent(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
+                    }
 
-                        const statusText = isCasualty ? 'CASUALTY' : 'ONLINE';
+                    // 2. Accuracy Bubble
+                    let bubbleColor = '#38bdf8';
+                    if (isCasualty) bubbleColor = '#ef4444';
+                    else if (isSignalLost) bubbleColor = '#f59e0b';
 
-                        // 1. Commando Marker
-                        if (!markers[key]) {
-                            const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
-                            const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] });
-                            markers[key] = L.marker(latLng, { icon: icon }).addTo(map);
-                            markers[key].bindPopup(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
-                        } else {
-                            markers[key].setLatLng(latLng);
-                            const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerColor};">${(unit.callsign || key).substring(0, 2)}</div>`;
-                            markers[key].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }));
-                            markers[key].getPopup().setContent(`<strong>${unit.callsign || key}</strong><br>Status: ${statusText}<br>Accuracy: ±${accRadius.toFixed(1)}m`);
-                        }
+                    if (!accuracyCircles[key]) {
+                        accuracyCircles[key] = L.circle(latLng, {
+                            radius: accRadius,
+                            color: bubbleColor,
+                            weight: 1,
+                            fillOpacity: 0.12,
+                            fillColor: bubbleColor
+                        }).addTo(map);
+                    } else {
+                        accuracyCircles[key].setLatLng(latLng);
+                        accuracyCircles[key].setRadius(accRadius);
+                        accuracyCircles[key].setStyle({
+                            color: bubbleColor,
+                            fillColor: bubbleColor,
+                            fillOpacity: 0.12
+                        });
+                    }
 
-                        // 2. High-Accuracy Uncertainty Bubble
-                        const bubbleColor = isCasualty ? '#ef4444' : '#38bdf8';
-                        if (!accuracyCircles[key]) {
-                            accuracyCircles[key] = L.circle(latLng, {
-                                radius: accRadius,
-                                color: bubbleColor,
-                                weight: 1,
-                                fillOpacity: 0.12,
-                                fillColor: bubbleColor
+                    // 3. Movement Path Segments
+                    if (!unitSegments[key]) unitSegments[key] = [];
+
+                    if (lastPositions[key]) {
+                        const prevLatLng = lastPositions[key];
+                        const distanceMoved = map.distance(prevLatLng, latLng);
+                        const minMoveThreshold = Math.max(2.5, accRadius * 0.4);
+
+                        if (distanceMoved >= minMoveThreshold) {
+                            const segmentColor = isCasualty ? '#ef4444' : (isSignalLost ? '#f59e0b' : '#38bdf8');
+                            const isDashed = (isCasualty || isSignalLost) ? '5, 5' : null;
+
+                            const segment = L.polyline([prevLatLng, latLng], {
+                                color: segmentColor,
+                                weight: 3.5,
+                                opacity: 0.85,
+                                dashArray: isDashed
                             }).addTo(map);
-                        } else {
-                            accuracyCircles[key].setLatLng(latLng);
-                            accuracyCircles[key].setRadius(accRadius);
-                            accuracyCircles[key].setStyle({
-                                color: bubbleColor,
-                                fillColor: bubbleColor,
-                                fillOpacity: 0.12
-                            });
-                        }
 
-                        // 3. Movement Path Segments
-                        if (!unitSegments[key]) unitSegments[key] = [];
+                            unitSegments[key].push(segment);
 
-                        if (lastPositions[key]) {
-                            const prevLatLng = lastPositions[key];
-                            const distanceMoved = map.distance(prevLatLng, latLng);
-                            const minMoveThreshold = Math.max(2.5, accRadius * 0.4);
-
-                            if (distanceMoved >= minMoveThreshold) {
-                                const segmentColor = isCasualty ? '#ef4444' : '#38bdf8';
-                                const isDashed = isCasualty ? '5, 5' : null;
-
-                                const segment = L.polyline([prevLatLng, latLng], {
-                                    color: segmentColor,
-                                    weight: 3.5,
-                                    opacity: 0.85,
-                                    dashArray: isDashed
-                                }).addTo(map);
-
-                                unitSegments[key].push(segment);
-
-                                if (unitSegments[key].length > 50) {
-                                    const oldestSegment = unitSegments[key].shift();
-                                    map.removeLayer(oldestSegment);
-                                }
-
-                                lastPositions[key] = latLng;
+                            if (unitSegments[key].length > 50) {
+                                const oldestSegment = unitSegments[key].shift();
+                                map.removeLayer(oldestSegment);
                             }
-                        } else {
+
                             lastPositions[key] = latLng;
                         }
+                    } else {
+                        lastPositions[key] = latLng;
                     }
+                }
 
-                    // 4. Sidebar Roster Card (Cleaned, No LaTeX artifact)
-                    const card = document.createElement("div");
-                    card.className = `unit-card ${isCasualty ? 'casualty' : ''}`;
-                    card.onclick = () => { 
-                        if (unit.lat && unit.lng) {
-                            map.setView([unit.lat, unit.lng], 17);
-                            if (window.innerWidth <= 768) {
-                                toggleSidebar();
-                            }
+                // 4. Sidebar Roster Card
+                const card = document.createElement("div");
+                card.className = `unit-card ${isCasualty ? 'casualty' : (isSignalLost ? 'stale' : '')}`;
+                card.onclick = () => { 
+                    if (unit.lat && unit.lng) {
+                        map.setView([unit.lat, unit.lng], 17);
+                        if (window.innerWidth <= 768) {
+                            toggleSidebar();
                         }
-                    };
+                    }
+                };
 
-                    const headingDeg = Math.round(unit.heading || 0);
+                const headingDeg = Math.round(unit.heading || 0);
 
-                    card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong>${unit.callsign || key}</strong>
-                            <span style="font-size:0.75rem; color:${isCasualty ? 'var(--accent-red)' : 'var(--accent-green)'}">
-                                ${isCasualty ? '🚨 CASUALTY' : '● ONLINE'}
-                            </span>
-                        </div>
-                        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-                            ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${unit.group || 'N/A'}
-                        </div>
-                        ${unit.audioActive ? `
-                            <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
-                                    onclick="event.stopPropagation(); toggleAudioListen('${key}')">
-                                ${currentListeningUnit === key ? '🔊 SPEAKER: ON (MUTE)' : '🎙️ TURN SPEAKER ON (LISTEN)'}
-                            </button>
-                        ` : ''}
-                    `;
-                    unitListEl.appendChild(card);
-                });
+                let statusLabel = '● ONLINE';
+                let statusColor = 'var(--accent-green)';
+                if (isCasualty) {
+                    statusLabel = '🚨 CASUALTY';
+                    statusColor = 'var(--accent-red)';
+                } else if (isSignalLost) {
+                    const secsAgo = Math.round(timeDiff / 1000);
+                    statusLabel = `⚠️ SIGNAL LOST (${secsAgo}s)`;
+                    statusColor = 'var(--accent-yellow)';
+                }
 
-                document.getElementById("onlineCount").innerText = onlineCount;
-                document.getElementById("casualtyCount").innerText = casualtyCount;
-                document.getElementById("staleCount").innerText = 0;
-                document.getElementById("totalUnitsBadge").innerText = `${onlineCount} UNITS`;
-                document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
-
-                // Mark initialization complete
-                isInitialLoad = false;
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>${unit.callsign || key}</strong>
+                        <span style="font-size:0.75rem; font-weight:bold; color:${statusColor};">
+                            ${statusLabel}
+                        </span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+                        ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${unit.group || 'N/A'}
+                    </div>
+                    ${unit.audioActive ? `
+                        <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
+                                onclick="event.stopPropagation(); toggleAudioListen('${key}')">
+                            ${currentListeningUnit === key ? '🔊 SPEAKER: ON (MUTE)' : '🎙️ TURN SPEAKER ON (LISTEN)'}
+                        </button>
+                    ` : ''}
+                `;
+                unitListEl.appendChild(card);
             });
+
+            document.getElementById("onlineCount").innerText = onlineCount;
+            document.getElementById("casualtyCount").innerText = casualtyCount;
+            document.getElementById("staleCount").innerText = staleCount;
+            document.getElementById("totalUnitsBadge").innerText = `${onlineCount + staleCount + casualtyCount} UNITS`;
+            document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
+
+            isInitialLoad = false;
         }
 
         function focusLatestCasualty() {
