@@ -65,6 +65,7 @@
             cursor: pointer; color: #0a0e17; text-transform: uppercase; transition: 0.2s background;
         }
         .auth-card button:hover { background: #7dd3fc; }
+        .auth-card button:disabled { opacity: 0.6; cursor: not-allowed; }
 
         /* Header Operations Bar */
         header { 
@@ -219,15 +220,18 @@
     <!-- Leaflet & Leaflet-Rotate SDKs -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+    
+    <!-- Firebase App, Database & Auth SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
     <!-- Remote Audio Player for Casualty Audio Intercept -->
     <audio id="remoteAudioPlayer" autoplay playsinline></audio>
 
-    <!-- Security Authorization Screen -->
+    <!-- Security Authorization Screen (Password Only) -->
     <div id="authOverlay">
         <div class="auth-card">
             <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -246,8 +250,8 @@
             <div class="auth-welcome-title">WELCOME</div>
             <div class="auth-subtitle">COMMANDO TRACKING SYSTEM</div>
 
-            <input type="password" id="c2Password" placeholder="Enter Password" onkeydown="if(event.key==='Enter') verifyAccess()">
-            <button onclick="verifyAccess()">LOGIN</button>
+            <input type="password" id="c2Password" placeholder="Enter Operations Passcode" onkeydown="if(event.key==='Enter') verifyAccess()">
+            <button id="loginBtn" onclick="verifyAccess()">LOGIN</button>
         </div>
     </div>
 
@@ -307,7 +311,7 @@
             </div>
             <div id="unitList" class="unit-list">
                 <div id="emptyRosterMsg" style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
-                    Enter Operations Password to connect...
+                    Enter Operations Passcode to connect...
                 </div>
             </div>
         </div>
@@ -327,6 +331,9 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+
+        // INTERNAL OPERATOR IDENTITY (Registered in Firebase Authentication)
+        const C2_OPERATOR_IDENTITY = "c2-operator@forceone.internal";
 
         // --- 2. MAP INITIALIZATION ---
         const map = L.map('tacticalMap', { 
@@ -370,8 +377,6 @@
         const knownUnits = {};       
         const STOP_STATUSES = ["STOPPED", "ENDED"]; 
         const STALE_MS = 30000;      
-        
-        const DASHBOARD_PASSWORD = "Forceone@123";
 
         // WebRTC & Audio Settings
         const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
@@ -400,6 +405,17 @@
                 toggleSidebar();
             }
         });
+
+        // XSS Sanitizer Helper
+        function sanitizeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
         // --- 4. MAP ROTATION & NORTH ARROW ENGINE ---
         function updateNorthCompass(deg) {
@@ -461,21 +477,50 @@
         }
 
         // --- 6. AUTHENTICATION & SESSION MANAGEMENT ---
-        function verifyAccess() {
-            const enteredPassword = document.getElementById("c2Password").value;
-            if (enteredPassword === DASHBOARD_PASSWORD) {
+        // Automatic state listener: Handles session restore and auth boundaries
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
                 document.getElementById("authOverlay").style.display = "none";
-                document.getElementById("c2Password").value = "";
 
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
 
                 cleanEntireMapAndDashboard();
                 isInitialLoginLoad = true;
-
                 startListeningTelemetry();
             } else {
-                alert("ACCESS DENIED: Invalid Tactical Password");
+                document.getElementById("authOverlay").style.display = "flex";
+                if (telemetryRef) {
+                    telemetryRef.off();
+                    telemetryRef = null;
+                }
+                cleanEntireMapAndDashboard();
+            }
+        });
+
+        async function verifyAccess() {
+            const passwordInput = document.getElementById("c2Password");
+            const loginBtn = document.getElementById("loginBtn");
+            const enteredPassword = passwordInput.value;
+
+            if (!enteredPassword) {
+                alert("Enter the operations passcode.");
+                return;
+            }
+
+            loginBtn.innerText = "VERIFYING...";
+            loginBtn.disabled = true;
+
+            try {
+                // Authenticates securely with Google Firebase servers
+                await firebase.auth().signInWithEmailAndPassword(C2_OPERATOR_IDENTITY, enteredPassword);
+                passwordInput.value = "";
+            } catch (err) {
+                alert("ACCESS DENIED: Invalid Tactical Passcode");
+                passwordInput.value = "";
+            } finally {
+                loginBtn.innerText = "LOGIN";
+                loginBtn.disabled = false;
             }
         }
 
@@ -504,42 +549,11 @@
             }
             isListening = false;
 
-            cleanEntireMapAndDashboard();
-            clearSitRepMarkers();
-
-            if (measureLine) {
-                map.removeLayer(measureLine);
-                measureLine = null;
-            }
-            measureActive = false;
-            document.getElementById("measureBtn").classList.remove("active");
-            document.getElementById("measureBtn").innerText = "📏 MEASURE";
-
             stopAudioMonitoring();
 
-            activeCasualties.clear();
-            if (activeSirenOsc) {
-                try { activeSirenOsc.stop(); } catch (e) {}
-                activeSirenOsc = null;
-            }
-            isSirenPlaying = false;
-
-            resetNorth();
-            resetPlacementState();
-
-            const sidebar = document.getElementById("sidebarPanel");
-            sidebar.style.display = "flex";
-            const btn = document.getElementById("toggleRosterBtn");
-            btn.innerText = "👁️ HIDE ROSTER";
-            btn.classList.add("active");
-
-            document.getElementById("unitList").innerHTML = `
-                <div style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
-                    Session locked. Enter Password to view telemetry.
-                </div>
-            `;
-
-            document.getElementById("authOverlay").style.display = "flex";
+            firebase.auth().signOut().then(() => {
+                location.reload();
+            });
         }
 
         // --- 7. TELEMETRY & SORTED ROSTER ENGINE ---
@@ -568,6 +582,8 @@
 
                 renderTelemetry();
                 isInitialLoginLoad = false;
+            }, (error) => {
+                console.error("Firebase Telemetry Error (Permission Denied):", error);
             });
 
             if (staleTimer) clearInterval(staleTimer);
@@ -709,9 +725,12 @@
                         statusLabelText = "OFFLINE";
                     }
 
-                    const initials = String(unit.callsign || key).substring(0, 2).toUpperCase();
+                    const safeCallsign = sanitizeHtml(unit.callsign || key);
+                    const safeStatus = sanitizeHtml(statusLabelText);
+                    const initials = safeCallsign.substring(0, 2).toUpperCase();
+                    
                     const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerBg};">${initials}</div>`;
-                    const popupHtml = `<strong>${unit.callsign || key}</strong><br>Status: ${statusLabelText}<br>Acc: ±${(unit.accuracy || 5).toFixed(1)}m`;
+                    const popupHtml = `<strong>${safeCallsign}</strong><br>Status: ${safeStatus}<br>Acc: ±${(unit.accuracy || 5).toFixed(1)}m`;
 
                     if (!markers[key]) {
                         markers[key] = L.marker(latLng, { 
@@ -728,7 +747,7 @@
                         markers[key].getPopup().setContent(popupHtml);
                     }
 
-                    // Accuracy Circle: Only visible when live
+                    // Accuracy Circle: Only visible when commando is live
                     if (isLive) {
                         const circleColor = isCasualty ? '#dc2626' : '#15803d';
                         const circleOpacity = 0.12;
@@ -818,7 +837,6 @@
 
                 card.className = `unit-card ${cardClass}`;
                 
-                // Clicking a unit card focuses the map WITHOUT auto-hiding the roster
                 card.onclick = () => { 
                     if (unit.lat && unit.lng) {
                         map.setView([unit.lat, unit.lng], 17);
@@ -826,16 +844,18 @@
                 };
 
                 const headingDeg = Math.round(unit.heading || 0);
+                const safeName = sanitizeHtml(unit.callsign || key);
+                const safeGroup = sanitizeHtml(unit.group || 'N/A');
 
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:#fff;">${unit.callsign || key}</strong>
+                        <strong style="color:#fff;">${safeName}</strong>
                         <span style="font-size:0.75rem; font-weight:bold; color:${statusBadgeColor}">
                             ${statusBadgeText}
                         </span>
                     </div>
                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-                        ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${unit.group || 'N/A'}
+                        ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${safeGroup}
                     </div>
                     ${unit.audioActive ? `
                         <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
@@ -860,14 +880,13 @@
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
-        // Focus casualty WITHOUT closing the sidebar
         function focusLatestCasualty() {
             if (latestCasualtyLatLng) {
                 map.setView(latestCasualtyLatLng, 18);
             }
         }
 
-        // --- 8. TACTICAL DISTRESS SIREN (NO BLINKING) ---
+        // --- 8. TACTICAL DISTRESS SIREN ---
         function playDistressSiren() {
             if (isSirenMuted || isSirenPlaying) return;
             try {
