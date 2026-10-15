@@ -332,8 +332,8 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // INTERNAL OPERATOR IDENTITY (Registered in Firebase Authentication)
-        const C2_OPERATOR_IDENTITY = "c2-operator@forceone.internal";
+        // INTERNAL OPERATOR IDENTITY
+        const C2_OPERATOR_IDENTITY = "anilmetkar0206@gmail.com";
 
         // --- 2. MAP INITIALIZATION ---
         const map = L.map('tacticalMap', { 
@@ -477,7 +477,6 @@
         }
 
         // --- 6. AUTHENTICATION & SESSION MANAGEMENT ---
-        // Automatic state listener: Handles session restore and auth boundaries
         firebase.auth().onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById("authOverlay").style.display = "none";
@@ -512,11 +511,10 @@
             loginBtn.disabled = true;
 
             try {
-                // Authenticates securely with Google Firebase servers
                 await firebase.auth().signInWithEmailAndPassword(C2_OPERATOR_IDENTITY, enteredPassword);
                 passwordInput.value = "";
             } catch (err) {
-                alert("ACCESS DENIED: Invalid Tactical Passcode");
+                alert("FIREBASE AUTH FAILED [" + err.code + "]: " + err.message);
                 passwordInput.value = "";
             } finally {
                 loginBtn.innerText = "LOGIN";
