@@ -693,7 +693,9 @@
                 // --- MAP MARKERS & PATHS ---
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
-                    const accRadius = Math.max(unit.accuracy || 5, 2);
+                    
+                    // Cap accuracy radius to 35m max to prevent sudden massive rings
+                    const accRadius = Math.min(Math.max(unit.accuracy || 5, 2), 35);
 
                     let markerClass = "marker-online";
                     let markerBg = "var(--color-online)"; // Dark Green
@@ -715,7 +717,7 @@
 
                     const initials = String(unit.callsign || key).substring(0, 2).toUpperCase();
                     const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerBg};">${initials}</div>`;
-                    const popupHtml = `<strong>${unit.callsign || key}</strong><br>Status: ${statusLabelText}<br>Acc: ±${accRadius.toFixed(1)}m`;
+                    const popupHtml = `<strong>${unit.callsign || key}</strong><br>Status: ${statusLabelText}<br>Acc: ±${(unit.accuracy || 5).toFixed(1)}m`;
 
                     // Marker update without flickering
                     if (!markers[key]) {
@@ -733,26 +735,34 @@
                         markers[key].getPopup().setContent(popupHtml);
                     }
 
-                    // Accuracy Circle
-                    const circleColor = isCasualty ? '#dc2626' : (isLive ? '#15803d' : '#ca8a04');
-                    const circleOpacity = isLive ? 0.12 : 0.05;
+                    // --- ACCURACY CIRCLE: ONLY SHOWN FOR LIVE / ACTIVE UNITS ---
+                    if (isLive) {
+                        const circleColor = isCasualty ? '#dc2626' : '#15803d';
+                        const circleOpacity = 0.12;
 
-                    if (!accuracyCircles[key]) {
-                        accuracyCircles[key] = L.circle(latLng, {
-                            radius: accRadius,
-                            color: circleColor,
-                            weight: 1,
-                            fillOpacity: circleOpacity,
-                            fillColor: circleColor
-                        }).addTo(map);
+                        if (!accuracyCircles[key]) {
+                            accuracyCircles[key] = L.circle(latLng, {
+                                radius: accRadius,
+                                color: circleColor,
+                                weight: 1,
+                                fillOpacity: circleOpacity,
+                                fillColor: circleColor
+                            }).addTo(map);
+                        } else {
+                            accuracyCircles[key].setLatLng(latLng);
+                            accuracyCircles[key].setRadius(accRadius);
+                            accuracyCircles[key].setStyle({
+                                color: circleColor,
+                                fillColor: circleColor,
+                                fillOpacity: circleOpacity
+                            });
+                        }
                     } else {
-                        accuracyCircles[key].setLatLng(latLng);
-                        accuracyCircles[key].setRadius(accRadius);
-                        accuracyCircles[key].setStyle({
-                            color: circleColor,
-                            fillColor: circleColor,
-                            fillOpacity: circleOpacity
-                        });
+                        // Automatically remove lingering circle once unit is stale or offline
+                        if (accuracyCircles[key]) {
+                            map.removeLayer(accuracyCircles[key]);
+                            delete accuracyCircles[key];
+                        }
                     }
 
                     // --- TRAVELED PATHS ---
