@@ -8,6 +8,7 @@ const perms = [
   "android.permission.ACCESS_NETWORK_STATE",
   "android.permission.ACCESS_FINE_LOCATION",
   "android.permission.ACCESS_COARSE_LOCATION",
+  "android.permission.ACCESS_BACKGROUND_LOCATION",
   "android.permission.FOREGROUND_SERVICE",
   "android.permission.FOREGROUND_SERVICE_LOCATION",
   "android.permission.FOREGROUND_SERVICE_MICROPHONE",
@@ -24,4 +25,5 @@ if (lines) {
   xml = xml.replace("</manifest>", lines + "\n</manifest>");
   fs.writeFileSync(path, xml);
 }
+
 console.log("Added permissions:", missing.length ? missing.join(", ") : "none (already present)");
