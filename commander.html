@@ -273,6 +273,7 @@
         </div>
         <div class="toolbar-actions">
             <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
+            <button id="toggleOfflineBtn" class="btn-tool" onclick="toggleOfflineFilter()">🟢 ONLINE ONLY: OFF</button>
             <button id="btnHostile" class="btn-tool btn-threat" onclick="setQuickMarker('HOSTILE')">🔴 +HOSTILE</button>
             <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
             <button id="btnBreach" class="btn-tool btn-breach" onclick="setQuickMarker('BREACH')">🟢 +BREACH</button>
@@ -374,6 +375,7 @@
         let telemetryRef = null;
         let isListening = false;
         let staleTimer = null;
+        let hideOffline = false; // Toggle state to filter offline commandos
         const knownUnits = {};       
         const STOP_STATUSES = ["STOPPED", "ENDED"]; 
         const STALE_MS = 30000;      
@@ -457,7 +459,7 @@
             }
         }
 
-        // --- 5. TOGGLE ROSTER ---
+        // --- 5. TOGGLE ROSTER & FILTER CONTROLS ---
         function toggleSidebar() {
             const sidebar = document.getElementById("sidebarPanel");
             const btn = document.getElementById("toggleRosterBtn");
@@ -474,6 +476,16 @@
             }
 
             setTimeout(() => { map.invalidateSize(); }, 150);
+        }
+
+        function toggleOfflineFilter() {
+            hideOffline = !hideOffline;
+            const btn = document.getElementById("toggleOfflineBtn");
+            if (btn) {
+                btn.classList.toggle("active", hideOffline);
+                btn.innerText = hideOffline ? "🟢 ONLINE ONLY: ON" : "🟢 ONLINE ONLY: OFF";
+            }
+            renderTelemetry();
         }
 
         // --- 6. AUTHENTICATION & SESSION MANAGEMENT ---
@@ -669,6 +681,7 @@
             let onlineCount = 0;
             let casualtyCount = 0;
             let staleCount = 0;
+            let visibleCount = 0;
 
             sortedKeys.forEach((key) => {
                 const unit = data[key];
@@ -693,6 +706,38 @@
                     }
                 } else {
                     activeCasualties.delete(key);
+                }
+
+                // If online-only mode is active, hide offline units (never hide casualties)
+                if (hideOffline && isOffline && !isCasualty) {
+                    if (markers[key]) {
+                        map.removeLayer(markers[key]);
+                        delete markers[key];
+                        delete markerHtmlCache[key];
+                    }
+                    if (accuracyCircles[key]) {
+                        map.removeLayer(accuracyCircles[key]);
+                        delete accuracyCircles[key];
+                    }
+                    if (unitSegments[key]) {
+                        unitSegments[key].forEach(seg => {
+                            if (map.hasLayer(seg)) map.removeLayer(seg);
+                        });
+                    }
+                    const card = document.getElementById(`unit_card_${key}`);
+                    if (card && card.parentNode) {
+                        card.parentNode.removeChild(card);
+                    }
+                    return;
+                }
+
+                visibleCount++;
+
+                // Ensure path segments are re-added if previously hidden
+                if (unitSegments[key]) {
+                    unitSegments[key].forEach(seg => {
+                        if (!map.hasLayer(seg)) seg.addTo(map);
+                    });
                 }
 
                 const ageSec = Math.max(0, Math.round(ageMs / 1000));
@@ -874,7 +919,7 @@
             document.getElementById("onlineCount").innerText = onlineCount;
             document.getElementById("casualtyCount").innerText = casualtyCount;
             document.getElementById("staleCount").innerText = staleCount;
-            document.getElementById("totalUnitsBadge").innerText = `${sortedKeys.length} UNITS`;
+            document.getElementById("totalUnitsBadge").innerText = `${visibleCount} UNITS`;
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
