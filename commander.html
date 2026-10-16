@@ -133,7 +133,10 @@
         /* Commando Cards - Zero Blinking */
         .unit-card { 
             background: #0f172a; border: 1px solid var(--border); border-radius: 6px; 
-            padding: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+            padding: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s;
+        }
+        .unit-card:hover {
+            transform: translateX(-2px);
         }
         
         /* State Card Styles */
@@ -174,6 +177,8 @@
         .btn-tool.btn-threat.active { background: #dc2626; color: #fff; font-weight: bold; }
         .btn-tool.btn-ied { border-color: #d97706; color: #fde68a; }
         .btn-tool.btn-ied.active { background: #d97706; color: #000; font-weight: bold; }
+        .btn-breach { border-color: #16a34a; color: #86efac; }
+        .btn-breach.active { background: #16a34a; color: #fff; font-weight: bold; }
         .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
 
         /* Tactical Markers - Zero Blinking */
@@ -181,6 +186,7 @@
             width: 28px; height: 28px; border-radius: 50%; display: flex; 
             align-items: center; justify-content: center; font-size: 11px; 
             font-weight: 900; color: #fff; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            transition: transform 0.2s ease-out;
         }
         .commando-marker.marker-online {
             background: var(--color-online) !important;
@@ -199,6 +205,19 @@
             background: var(--color-offline) !important;
             border-color: #64748b;
             opacity: 0.35;
+        }
+
+        /* Marker Focus Radar Ping Animation */
+        @keyframes targetPing {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.95), 0 0 10px rgba(0,0,0,0.8); }
+            70% { box-shadow: 0 0 0 28px rgba(56, 189, 248, 0), 0 0 15px rgba(56, 189, 248, 0.3); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0), 0 0 10px rgba(0,0,0,0.8); }
+        }
+
+        .commando-marker.marker-focused {
+            animation: targetPing 1.2s ease-out 2;
+            border-color: #38bdf8 !important;
+            transform: scale(1.15);
         }
 
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
@@ -880,11 +899,8 @@
 
                 card.className = `unit-card ${cardClass}`;
                 
-                card.onclick = () => { 
-                    if (unit.lat && unit.lng) {
-                        map.setView([unit.lat, unit.lng], 17);
-                    }
-                };
+                // Click-to-Center Focus with flyTo, popup reveal, and radar ping
+                card.onclick = () => focusCommando(key);
 
                 const headingDeg = Math.round(unit.heading || 0);
                 const safeName = sanitizeHtml(unit.callsign || key);
@@ -923,13 +939,66 @@
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
-        function focusLatestCasualty() {
-            if (latestCasualtyLatLng) {
-                map.setView(latestCasualtyLatLng, 18);
+        // --- 8. TACTICAL FOCUS CONTROLS ---
+        function focusCommando(unitKey) {
+            const unit = knownUnits[unitKey];
+            if (!unit || typeof unit.lat !== 'number' || typeof unit.lng !== 'number') {
+                console.warn(`No telemetry coordinates available for ${unitKey}`);
+                return;
+            }
+
+            const targetPos = [unit.lat, unit.lng];
+            const targetZoom = 18;
+
+            // Smooth pan and zoom animation to the operator's pin
+            map.flyTo(targetPos, targetZoom, {
+                animate: true,
+                duration: 1.2,
+                easeLinearity: 0.25
+            });
+
+            // Reveal tactical popup
+            if (markers[unitKey]) {
+                markers[unitKey].openPopup();
+                
+                // Trigger visual radar ping on the marker DOM element
+                const markerEl = markers[unitKey].getElement();
+                if (markerEl) {
+                    const innerMarker = markerEl.querySelector('.commando-marker');
+                    if (innerMarker) {
+                        innerMarker.classList.remove('marker-focused');
+                        void innerMarker.offsetWidth; // Force reflow
+                        innerMarker.classList.add('marker-focused');
+                    }
+                }
+            }
+
+            // Auto-collapse sidebar on mobile screens so map remains unobstructed
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById("sidebarPanel");
+                const btn = document.getElementById("toggleRosterBtn");
+                if (sidebar && sidebar.style.display !== "none") {
+                    sidebar.style.display = "none";
+                    if (btn) {
+                        btn.innerText = "👁️ SHOW ROSTER";
+                        btn.classList.remove("active");
+                    }
+                    setTimeout(() => map.invalidateSize(), 150);
+                }
             }
         }
 
-        // --- 8. TACTICAL DISTRESS SIREN ---
+        function focusLatestCasualty() {
+            if (latestCasualtyLatLng) {
+                map.flyTo(latestCasualtyLatLng, 18, {
+                    animate: true,
+                    duration: 1.0,
+                    easeLinearity: 0.25
+                });
+            }
+        }
+
+        // --- 9. TACTICAL DISTRESS SIREN ---
         function playDistressSiren() {
             if (isSirenMuted || isSirenPlaying) return;
             try {
@@ -988,7 +1057,7 @@
             }
         }
 
-        // --- 9. AUDIO INTERCEPT (WebRTC) ---
+        // --- 10. AUDIO INTERCEPT (WebRTC) ---
         async function toggleAudioListen(unitKey) {
             const player = document.getElementById("remoteAudioPlayer");
 
@@ -1111,7 +1180,7 @@
             }
         }
 
-        // --- 10. SITREP MARKERS ---
+        // --- 11. SITREP MARKERS ---
         function setQuickMarker(type) {
             if (activePlacementType === type) {
                 resetPlacementState();
@@ -1166,7 +1235,7 @@
             situationMarkers.length = 0;
         }
 
-        // --- 11. MEASUREMENT & MAP CLICKS ---
+        // --- 12. MEASUREMENT & MAP CLICKS ---
         let measureActive = false;
         let measurePoints = [];
         let measureLine = null;
