@@ -92,46 +92,6 @@
             justify-content: space-between; align-items: center; z-index: 2000; flex-wrap: wrap; gap: 6px;
         }
 
-        /* Tactical Squad Merge Controller Bar */
-        .hit-merge-bar {
-            background: #0b1324; border-bottom: 2px solid #1e293b; padding: 6px 16px;
-            display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            flex-wrap: wrap; z-index: 995;
-        }
-        .merge-controls-left {
-            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-        }
-        .merge-label {
-            font-size: 0.75rem; font-weight: 900; letter-spacing: 1.5px;
-            color: var(--accent-blue); white-space: nowrap;
-        }
-        .merge-select {
-            background: #1e293b; color: #fff; border: 1px solid #334155;
-            border-radius: 4px; padding: 5px 10px; font-size: 0.75rem;
-            font-family: monospace; outline: none; cursor: pointer;
-        }
-        .merge-select:disabled { opacity: 0.45; cursor: not-allowed; }
-        .btn-merge-action {
-            background: #0284c7; color: #fff; font-weight: 900;
-            border-color: #38bdf8; padding: 5px 12px; cursor: pointer;
-            border-radius: 4px; font-size: 0.75rem;
-        }
-        .btn-merge-action.active-unmerge {
-            background: #d97706; color: #fff; border-color: #f59e0b;
-        }
-        .active-merged-badges {
-            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-        }
-        .merged-badge-tag {
-            background: #1e1b4b; border: 1px solid #6366f1; color: #c7d2fe;
-            font-size: 0.7rem; font-weight: bold; padding: 3px 8px;
-            border-radius: 4px; display: inline-flex; align-items: center; gap: 6px;
-        }
-        .merged-badge-tag button {
-            background: #ef4444; border: none; color: #fff; font-weight: 900;
-            cursor: pointer; font-size: 0.65rem; padding: 1px 4px; border-radius: 2px;
-        }
-
         /* Workspace Grid */
         .workspace { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
         #tacticalMap { flex: 1; height: 100%; width: 100%; background: #000; }
@@ -161,7 +121,7 @@
 
         /* Sidebar Roster */
         .sidebar { 
-            width: 350px; background: var(--panel-bg); border-left: 2px solid var(--border); 
+            width: 340px; background: var(--panel-bg); border-left: 2px solid var(--border); 
             display: flex; flex-direction: column; transition: all 0.2s ease-in-out; z-index: 1050;
         }
         .sidebar-header { 
@@ -207,17 +167,15 @@
             color: #64748b;
         }
 
-        /* Merged Squad Card */
-        .unit-card.card-merged-squad {
-            background: #0f1c30;
-            border: 1px solid #38bdf8;
-            border-left: 5px solid #38bdf8;
+        /* Merged Squad Card Special Styling */
+        .unit-card.card-squad {
+            border-left: 5px solid #38bdf8 !important;
             box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+            background: #0b1329 !important;
         }
-        .unit-card.card-merged-squad.casualty {
-            border: 2px solid var(--color-distress);
-            border-left: 5px solid var(--color-distress);
-            background: rgba(127, 29, 29, 0.4);
+        .unit-card.card-squad.card-casualty {
+            border-left: 5px solid var(--color-distress) !important;
+            background: rgba(127, 29, 29, 0.45) !important;
         }
 
         .btn-listen { 
@@ -238,7 +196,9 @@
         .btn-tool.btn-ied.active { background: #d97706; color: #000; font-weight: bold; }
         .btn-breach { border-color: #16a34a; color: #86efac; }
         .btn-breach.active { background: #16a34a; color: #fff; font-weight: bold; }
-        .btn-purge { border-color: #f59e0b; color: #fef08a; }
+        .btn-merge { border-color: #38bdf8; color: #7dd3fc; font-weight: bold; }
+        .btn-merge.active { background: #0284c7; color: #fff; }
+        .btn-purge { border-color: #f59e0b; color: #fef08a; font-weight: bold; }
         .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
 
         /* Tactical Markers */
@@ -272,52 +232,87 @@
             opacity: 0.35;
         }
 
-        /* Merged Squad Map Marker */
-        .merged-squad-marker {
-            min-width: 58px; height: 32px; padding: 2px 6px; border-radius: 6px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 9px; font-weight: 900; color: #fff; border: 2px solid #fff;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.8); background: #0284c7;
-            text-align: center; white-space: nowrap;
+        /* Merged Squad Marker */
+        .squad-marker {
+            width: 38px; height: 38px; border-radius: 8px; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center; 
+            font-size: 9px; font-weight: 900; color: #fff; border: 2px solid #38bdf8; 
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+            transition: transform 0.2s ease-out;
+            background: #0f172a;
+            user-select: none;
         }
-        .merged-squad-marker.marker-online {
-            background: #15803d !important;
-            border-color: #86efac;
+        .squad-marker.marker-online {
+            border-color: #4ade80;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
         }
-        .merged-squad-marker.marker-relay {
-            background: #d97706 !important;
-            border-color: #fde68a;
-            box-shadow: 0 0 15px rgba(217, 119, 6, 0.85);
+        .squad-marker.marker-relay {
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
         }
-        .merged-squad-marker.marker-casualty {
-            background: #dc2626 !important;
-            border-color: #ffffff !important;
-            box-shadow: 0 0 20px rgba(220, 38, 38, 1);
+        .squad-marker.marker-casualty {
+            border-color: #ef4444;
+            background: #7f1d1d !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.85);
             animation: targetPing 1.2s infinite;
         }
-        .merged-squad-marker.marker-stale {
-            background: #ca8a04 !important;
-            border-color: #fef08a;
-            opacity: 0.85;
-        }
-        .merged-squad-marker.marker-offline {
-            background: #475569 !important;
-            border-color: #94a3b8;
-            opacity: 0.45;
-        }
 
-        /* Marker Focus Radar Ping Animation */
         @keyframes targetPing {
             0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.95), 0 0 10px rgba(0,0,0,0.8); }
             70% { box-shadow: 0 0 0 28px rgba(56, 189, 248, 0), 0 0 15px rgba(56, 189, 248, 0.3); }
             100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0), 0 0 10px rgba(0,0,0,0.8); }
         }
 
-        .commando-marker.marker-focused,
-        .merged-squad-marker.marker-focused {
+        .commando-marker.marker-focused, .squad-marker.marker-focused {
             animation: targetPing 1.2s ease-out 2;
             border-color: #38bdf8 !important;
             transform: scale(1.15);
+        }
+
+        /* Hit Merge Tactical Modal */
+        #hitMergeModal {
+            display: none; position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); 
+            z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+        }
+        .merge-dialog {
+            background: #111827; border: 2px solid #38bdf8; border-radius: 12px; 
+            width: 420px; max-width: 92vw; padding: 22px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9);
+        }
+        .merge-dialog h3 {
+            font-size: 1.05rem; color: #38bdf8; letter-spacing: 1.5px; 
+            margin-bottom: 14px; text-transform: uppercase; display: flex; 
+            justify-content: space-between; align-items: center;
+        }
+        .merge-dialog label {
+            display: block; font-size: 0.72rem; color: var(--text-muted); 
+            margin-top: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: bold;
+        }
+        .merge-dialog select {
+            width: 100%; background: #0f172a; color: #fff; border: 1px solid #334155; 
+            padding: 9px; border-radius: 6px; font-size: 0.88rem; outline: none; margin-bottom: 8px;
+        }
+        .merge-dialog select:focus { border-color: #38bdf8; }
+        .squad-status-box {
+            background: #0b1329; border: 1px solid #1e293b; border-radius: 6px; 
+            padding: 10px; margin-top: 10px; margin-bottom: 16px; font-size: 0.75rem;
+        }
+        .merge-dialog-btns {
+            display: flex; gap: 8px; margin-top: 12px;
+        }
+        .merge-dialog-btns button {
+            flex: 1; padding: 11px; border-radius: 6px; border: none; 
+            font-size: 0.85rem; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-modal-merge { background: #0284c7; color: #fff; }
+        .btn-modal-merge:hover { background: #0369a1; }
+        .btn-modal-unmerge { background: #b91c1c; color: #fff; }
+        .btn-modal-unmerge:hover { background: #991b1b; }
+        .active-merged-list {
+            margin-top: 16px; padding-top: 12px; border-top: 1px solid #1e293b; max-height: 140px; overflow-y: auto;
+        }
+        .active-merged-item {
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #0f172a; padding: 6px 10px; border-radius: 4px; margin-bottom: 6px; font-size: 0.72rem;
         }
 
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
@@ -333,7 +328,6 @@
                 box-shadow: -10px 0 30px rgba(0, 0, 0, 0.85);
             }
             .tactical-compass-hud { top: 10px; left: 10px; padding: 4px; }
-            .hit-merge-bar { padding: 6px 10px; }
         }
     </style>
 
@@ -375,6 +369,12 @@
         </div>
     </div>
 
+    <!-- Emergency Casualty Alert Banner -->
+    <div id="casualtyNoticeBar">
+        <span id="casualtyNoticeText">🚨 SIGNAL ALERT: CASUALTY / DISTRESS RECORDED ON GRID</span>
+        <button onclick="focusLatestCasualty()" style="background:#fff; color:#000; border:none; padding:4px 10px; font-weight:bold; cursor:pointer; border-radius:4px;">FOCUS TARGET</button>
+    </div>
+
     <!-- Header Operations Bar -->
     <header>
         <div class="header-brand">
@@ -388,6 +388,7 @@
         </div>
         <div class="toolbar-actions">
             <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
+            <button id="btnHitMerge" class="btn-tool btn-merge" onclick="openHitMergeModal()">🔀 MERGE HITS</button>
             <button id="toggleOfflineBtn" class="btn-tool" onclick="toggleOfflineFilter()">🟢 ONLINE ONLY: OFF</button>
             <button id="btnHostile" class="btn-tool btn-threat" onclick="setQuickMarker('HOSTILE')">🔴 +HOSTILE</button>
             <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
@@ -400,32 +401,55 @@
         </div>
     </header>
 
-    <!-- Emergency Casualty Alert Banner -->
-    <div id="casualtyNoticeBar">
-        <span id="casualtyNoticeText">🚨 SIGNAL ALERT: CASUALTY / DISTRESS RECORDED ON GRID</span>
-        <button onclick="focusLatestCasualty()" style="background:#fff; color:#000; border:none; padding:4px 10px; font-weight:bold; cursor:pointer; border-radius:4px;">FOCUS TARGET</button>
-    </div>
+    <!-- Tactical Hit Merge Modal Dialog -->
+    <div id="hitMergeModal">
+        <div class="merge-dialog">
+            <h3>
+                <span>🔀 HIT SQUAD FORMATION</span>
+                <span onclick="closeHitMergeModal()" style="cursor:pointer; color:#94a3b8; font-size:1.1rem;">✕</span>
+            </h3>
 
-    <!-- Tactical Squad Merge Controller Bar -->
-    <div id="hitMergeBar" class="hit-merge-bar">
-        <div class="merge-controls-left">
-            <span class="merge-label">🎯 SQUAD MERGE:</span>
-            <select id="mergeGroupSelect" class="merge-select" onchange="onMergeGroupChange()">
-                <option value="">-- SELECT GROUP --</option>
+            <label for="modalGroupSelect">1. Select Action Group</label>
+            <select id="modalGroupSelect" onchange="onModalGroupChange()">
                 <option value="Alfa">Alfa</option>
                 <option value="Bravo">Bravo</option>
-                <option value="Charlie">Charlie</option>
+                <option value="Charlie" selected>Charlie</option>
                 <option value="Delta">Delta</option>
-                <option value="SOT">SOT (Special Ops Team)</option>
+                <option value="SOT">SOT (Special Operations Team)</option>
                 <option value="Sniper">Sniper</option>
                 <option value="BD">BD (Bomb Disposal)</option>
             </select>
-            <select id="mergeHitSelect" class="merge-select" onchange="updateMergeBtnState()" disabled>
-                <option value="">-- SELECT HIT --</option>
+
+            <label for="modalHitSelect">2. Select Hit Assignment</label>
+            <select id="modalHitSelect" onchange="updateModalSquadStatus()">
+                <option value="Hit 1">Hit 1</option>
+                <option value="Hit 2">Hit 2</option>
+                <option value="Hit 3" selected>Hit 3</option>
+                <option value="Hit 4">Hit 4</option>
+                <option value="Hit 5">Hit 5</option>
+                <option value="Hit 6">Hit 6</option>
+                <option value="Hit 7">Hit 7</option>
+                <option value="Hit 8">Hit 8</option>
             </select>
-            <button id="btnToggleMergeHit" class="btn-merge-action" onclick="toggleMergeCurrentHit()" disabled>⚡ MERGE HIT</button>
+
+            <div id="modalSquadStatusBox" class="squad-status-box">
+                <div id="modalStatusCount" style="font-weight:bold; color:#38bdf8;">DETECTED: 0 COMMANDOS</div>
+                <div id="modalStatusList" style="font-size:0.68rem; color:var(--text-muted); margin-top:3px;">No commandos detected for this Hit.</div>
+            </div>
+
+            <div class="merge-dialog-btns">
+                <button id="modalActionBtn" class="btn-modal-merge" onclick="toggleMergeCurrentSelection()">🔀 MERGE HIT (CENTROID GPS)</button>
+            </div>
+
+            <div class="active-merged-list">
+                <div style="font-size:0.7rem; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
+                    Active Merged Squads (<span id="mergedSquadsCount">0</span>)
+                </div>
+                <div id="activeMergedItemsContainer">
+                    <div style="color:#64748b; font-size:0.7rem;">No squads currently merged.</div>
+                </div>
+            </div>
         </div>
-        <div id="activeMergedBadges" class="active-merged-badges"></div>
     </div>
 
     <!-- Workspace -->
@@ -506,7 +530,7 @@
             "Satellite Imagery": satelliteLayer
         }, null, { position: 'topright' }).addTo(map);
 
-        // --- 3. STORAGE, TRACKING & MERGE STATE ---
+        // --- 3. STORAGE & TRACKING STATE ---
         const markers = {};          
         const markerHtmlCache = {};  
         const accuracyCircles = {};  
@@ -517,11 +541,10 @@
         const situationMarkers = []; 
         let latestCasualtyLatLng = null;
 
-        // Squad Hit Merging System State
-        const mergedHits = new Set();        // Set of active merged hit keys: "Group|Hit" (e.g. "Charlie|Hit 3")
-        const mergedMarkers = {};            // Map of Leaflet markers for merged hits
-        const mergedCircles = {};            // Map of Leaflet spread circles for merged hits
-        const mergedMarkerHtmlCache = {};
+        // HIT MERGE / SQUAD FORMATION STATE
+        const mergedHits = new Set(); // Stores canonical keys like "CHARLIE::HIT3", "ALFA::HIT1"
+        const squadMarkers = {};      // Visual centroid squad markers
+        const squadCircles = {};      // Perimeter / spread footprint circles
 
         let telemetryRef = null;
         let isListening = false;
@@ -592,147 +615,53 @@
         }
 
         /**
-         * Resolves the Action Group and Hit Assignment for any commando telemetry record
+         * Identifies the Group and Hit for any commando from telemetry or callsign.
+         * Returns { group, hit, canonicalHitKey, cdoNum }
          */
-        function parseGroupAndHit(unit, key) {
-            let grp = unit.group || "";
+        function getUnitGroupAndHit(unit, key) {
+            let group = unit.group || "";
             let hit = unit.hit || "";
-            const cs = String(unit.callsign || key).toUpperCase();
+            const callsign = (unit.callsign || key || "").toUpperCase();
 
-            if (!grp) {
-                const groups = ["ALFA", "BRAVO", "CHARLIE", "DELTA", "SOT", "SNIPER", "BD"];
-                for (let g of groups) {
-                    if (cs.includes(g)) {
-                        grp = (g === "SOT" || g === "BD") ? g : (g.charAt(0) + g.slice(1).toLowerCase());
+            if (!group) {
+                const groupList = ["ALFA", "ALPHA", "BRAVO", "CHARLIE", "DELTA", "SOT", "SNIPER", "BD"];
+                for (let g of groupList) {
+                    if (callsign.includes(g)) {
+                        group = (g === "ALPHA") ? "Alfa" : (g.charAt(0) + g.slice(1).toLowerCase());
                         break;
                     }
                 }
             }
 
             if (!hit) {
-                const m = cs.match(/HIT[\s-]*(\d+)/);
-                if (m) {
-                    hit = "Hit " + m[1];
+                const mHit = callsign.match(/HIT[- ]?(\d+)/i);
+                if (mHit) {
+                    hit = `Hit ${mHit[1]}`;
                 } else {
-                    const m2 = cs.match(/(INDIA[\s-]*\d+|BD[\s-]*\d+)/);
-                    if (m2) hit = m2[1].replace("-", " ").trim();
+                    const mIndia = callsign.match(/INDIA[- ]?(\d+)/i);
+                    if (mIndia) hit = `India ${mIndia[1]}`;
+                    const mBd = callsign.match(/BD[- ]?(\d+)/i);
+                    if (mBd) hit = `BD ${mBd[1]}`;
                 }
             }
 
-            return { group: grp || "UNASSIGNED", hit: hit || "HIT-1" };
+            // Extract Commando Number (e.g. CDO-1 or Commando 2)
+            let cdoNum = "";
+            const mCdo = callsign.match(/(?:CDO|COMMANDO)[- ]?(\d+)/i);
+            if (mCdo) cdoNum = `CDO-${mCdo[1]}`;
+
+            const cleanGroup = (group || "UNKNOWN").toUpperCase();
+            const cleanHit = (hit || "UNKNOWN").toUpperCase().replace(/\s+/g, "");
+
+            return {
+                group: group || "Unknown",
+                hit: hit || "Unknown",
+                cdoNum: cdoNum,
+                canonicalHitKey: `${cleanGroup}::${cleanHit}`
+            };
         }
 
-        // --- 4. SQUAD HIT MERGE CONTROLLER LOGIC ---
-        function onMergeGroupChange() {
-            const grp = document.getElementById("mergeGroupSelect").value;
-            const hitSelect = document.getElementById("mergeHitSelect");
-            
-            hitSelect.innerHTML = '<option value="">-- SELECT HIT --</option>';
-            hitSelect.disabled = true;
-
-            if (!grp) {
-                updateMergeBtnState();
-                return;
-            }
-
-            hitSelect.disabled = false;
-            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(grp)) {
-                for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
-            } else if (grp === "SOT") {
-                for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
-            } else if (grp === "Sniper") {
-                ["India 1", "India 2", "India 3", "India 4"].forEach(h => hitSelect.add(new Option(h, h)));
-            } else if (grp === "BD") {
-                ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
-            }
-
-            updateMergeBtnState();
-        }
-
-        function updateMergeBtnState() {
-            const grp = document.getElementById("mergeGroupSelect").value;
-            const hit = document.getElementById("mergeHitSelect").value;
-            const btn = document.getElementById("btnToggleMergeHit");
-
-            if (!grp || !hit) {
-                btn.disabled = true;
-                btn.className = "btn-merge-action";
-                btn.innerText = "⚡ MERGE HIT";
-                return;
-            }
-
-            btn.disabled = false;
-            const hitKey = `${grp}|${hit}`;
-            if (mergedHits.has(hitKey)) {
-                btn.className = "btn-merge-action active-unmerge";
-                btn.innerText = `🔓 UNMERGE (${grp} ${hit})`;
-            } else {
-                btn.className = "btn-merge-action";
-                btn.innerText = `⚡ MERGE (${grp} ${hit})`;
-            }
-        }
-
-        function toggleMergeCurrentHit() {
-            const grp = document.getElementById("mergeGroupSelect").value;
-            const hit = document.getElementById("mergeHitSelect").value;
-            if (!grp || !hit) return;
-
-            const hitKey = `${grp}|${hit}`;
-            if (mergedHits.has(hitKey)) {
-                unmergeHit(hitKey);
-            } else {
-                mergeHit(hitKey);
-            }
-        }
-
-        function mergeHit(hitKey) {
-            mergedHits.add(hitKey);
-            updateMergeBtnState();
-            renderActiveMergedBadges();
-            renderTelemetry();
-        }
-
-        function unmergeHit(hitKey) {
-            mergedHits.delete(hitKey);
-            
-            // Clean up merged map elements
-            if (mergedMarkers[hitKey]) {
-                map.removeLayer(mergedMarkers[hitKey]);
-                delete mergedMarkers[hitKey];
-            }
-            if (mergedCircles[hitKey]) {
-                map.removeLayer(mergedCircles[hitKey]);
-                delete mergedCircles[hitKey];
-            }
-            delete mergedMarkerHtmlCache[hitKey];
-
-            // Remove merged card from sidebar
-            const mergedCard = document.getElementById(`merged_card_${hitKey.replace(/[^a-zA-Z0-9]/g, '_')}`);
-            if (mergedCard && mergedCard.parentNode) {
-                mergedCard.parentNode.removeChild(mergedCard);
-            }
-
-            updateMergeBtnState();
-            renderActiveMergedBadges();
-            renderTelemetry();
-        }
-
-        function renderActiveMergedBadges() {
-            const container = document.getElementById("activeMergedBadges");
-            if (!container) return;
-            container.innerHTML = "";
-
-            mergedHits.forEach(hitKey => {
-                const parts = hitKey.split("|");
-                const label = `${parts[0]} - ${parts[1]}`;
-                const tag = document.createElement("div");
-                tag.className = "merged-badge-tag";
-                tag.innerHTML = `<span>⚡ ${label}</span><button onclick="unmergeHit('${hitKey}')" title="Unmerge this Hit">✖</button>`;
-                container.appendChild(tag);
-            });
-        }
-
-        // --- 5. MAP ROTATION & NORTH ARROW ENGINE ---
+        // --- 4. MAP ROTATION & NORTH ARROW ENGINE ---
         function updateNorthCompass(deg) {
             const normalized = ((Math.round(deg) % 360) + 360) % 360;
             const needle = document.getElementById("northNeedle");
@@ -770,6 +699,152 @@
                 map.setBearing(0);
                 updateNorthCompass(0);
             }
+        }
+
+        // --- 5. HIT MERGE / SQUAD FORMATION CONTROLS ---
+        function openHitMergeModal() {
+            document.getElementById("hitMergeModal").style.display = "flex";
+            onModalGroupChange();
+            updateModalSquadStatus();
+            renderActiveMergedList();
+        }
+
+        function closeHitMergeModal() {
+            document.getElementById("hitMergeModal").style.display = "none";
+        }
+
+        function onModalGroupChange() {
+            const group = document.getElementById("modalGroupSelect").value;
+            const hitSelect = document.getElementById("modalHitSelect");
+            hitSelect.innerHTML = "";
+
+            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(group)) {
+                for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+            } else if (group === "SOT") {
+                for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+            } else if (group === "Sniper") {
+                ["India 1", "India 2", "India 3", "India 4"].forEach(s => hitSelect.add(new Option(s, s)));
+            } else if (group === "BD") {
+                ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
+            }
+
+            updateModalSquadStatus();
+        }
+
+        function getModalCanonicalKey() {
+            const group = document.getElementById("modalGroupSelect").value.toUpperCase();
+            const hit = document.getElementById("modalHitSelect").value.toUpperCase().replace(/\s+/g, "");
+            return `${group}::${hit}`;
+        }
+
+        function updateModalSquadStatus() {
+            const canonicalKey = getModalCanonicalKey();
+            const group = document.getElementById("modalGroupSelect").value;
+            const hit = document.getElementById("modalHitSelect").value;
+            const isMerged = mergedHits.has(canonicalKey);
+
+            // Find all matching active commandos
+            const matchingCommandos = [];
+            Object.keys(knownUnits).forEach(k => {
+                const u = knownUnits[k];
+                const info = getUnitGroupAndHit(u, k);
+                if (info.canonicalHitKey === canonicalKey) {
+                    matchingCommandos.push(info.cdoNum || u.callsign || k);
+                }
+            });
+
+            const countEl = document.getElementById("modalStatusCount");
+            const listEl = document.getElementById("modalStatusList");
+            const actionBtn = document.getElementById("modalActionBtn");
+
+            countEl.innerText = `${group.toUpperCase()} ${hit.toUpperCase()}: ${matchingCommandos.length} COMMANDOS DETECTED`;
+            listEl.innerText = matchingCommandos.length > 0 
+                ? `Active in Grid: ${matchingCommandos.join(", ")}` 
+                : "No telemetry packets received yet for this Hit.";
+
+            if (isMerged) {
+                actionBtn.className = "btn-modal-unmerge";
+                actionBtn.innerText = `🔄 UNMERGE ${group.toUpperCase()} ${hit.toUpperCase()} (SHOW 6 INDIVIDUAL)`;
+            } else {
+                actionBtn.className = "btn-modal-merge";
+                actionBtn.innerText = `🔀 MERGE ${group.toUpperCase()} ${hit.toUpperCase()} (CENTROID GPS)`;
+            }
+        }
+
+        function toggleMergeCurrentSelection() {
+            const canonicalKey = getModalCanonicalKey();
+            const group = document.getElementById("modalGroupSelect").value;
+            const hit = document.getElementById("modalHitSelect").value;
+
+            if (mergedHits.has(canonicalKey)) {
+                unmergeHit(canonicalKey);
+            } else {
+                mergeHit(group, hit);
+            }
+
+            updateModalSquadStatus();
+            renderActiveMergedList();
+            renderTelemetry();
+        }
+
+        function mergeHit(group, hit) {
+            const cleanGroup = group.toUpperCase();
+            const cleanHit = hit.toUpperCase().replace(/\s+/g, "");
+            const canonicalKey = `${cleanGroup}::${cleanHit}`;
+            
+            mergedHits.add(canonicalKey);
+            renderTelemetry();
+        }
+
+        function unmergeHit(canonicalKey) {
+            mergedHits.delete(canonicalKey);
+
+            // Remove Squad marker and perimeter circle from map
+            if (squadMarkers[canonicalKey]) {
+                map.removeLayer(squadMarkers[canonicalKey]);
+                delete squadMarkers[canonicalKey];
+            }
+            if (squadCircles[canonicalKey]) {
+                map.removeLayer(squadCircles[canonicalKey]);
+                delete squadCircles[canonicalKey];
+            }
+
+            renderTelemetry();
+            renderActiveMergedList();
+            updateModalSquadStatus();
+        }
+
+        function renderActiveMergedList() {
+            const container = document.getElementById("activeMergedItemsContainer");
+            const countEl = document.getElementById("mergedSquadsCount");
+            const btnToolbar = document.getElementById("btnHitMerge");
+
+            countEl.innerText = mergedHits.size;
+            if (btnToolbar) {
+                btnToolbar.classList.toggle("active", mergedHits.size > 0);
+                btnToolbar.innerText = mergedHits.size > 0 
+                    ? `🔀 SQUADS MERGED (${mergedHits.size})` 
+                    : `🔀 MERGE HITS`;
+            }
+
+            if (mergedHits.size === 0) {
+                container.innerHTML = '<div style="color:#64748b; font-size:0.7rem;">No squads currently merged.</div>';
+                return;
+            }
+
+            container.innerHTML = "";
+            mergedHits.forEach(canonicalKey => {
+                const parts = canonicalKey.split("::");
+                const item = document.createElement("div");
+                item.className = "active-merged-item";
+                item.innerHTML = `
+                    <span style="font-weight:bold; color:#7dd3fc;">${parts[0]} - ${parts[1]}</span>
+                    <button onclick="unmergeHit('${canonicalKey}')" style="background:#dc2626; color:#fff; border:none; padding:3px 8px; border-radius:3px; cursor:pointer; font-size:0.65rem; font-weight:bold;">
+                        UNMERGE
+                    </button>
+                `;
+                container.appendChild(item);
+            });
         }
 
         // --- 6. TOGGLE ROSTER & FILTER CONTROLS ---
@@ -850,19 +925,9 @@
         function cleanEntireMapAndDashboard() {
             Object.keys(markers).forEach(k => removeUnitFromMap(k));
             Object.keys(knownUnits).forEach(k => delete knownUnits[k]);
-
-            // Clean merged markers
-            Object.keys(mergedMarkers).forEach(k => {
-                if (mergedMarkers[k]) map.removeLayer(mergedMarkers[k]);
-                delete mergedMarkers[k];
-            });
-            Object.keys(mergedCircles).forEach(k => {
-                if (mergedCircles[k]) map.removeLayer(mergedCircles[k]);
-                delete mergedCircles[k];
-            });
-            mergedHits.clear();
-            renderActiveMergedBadges();
-            updateMergeBtnState();
+            
+            Object.keys(squadMarkers).forEach(k => { map.removeLayer(squadMarkers[k]); delete squadMarkers[k]; });
+            Object.keys(squadCircles).forEach(k => { map.removeLayer(squadCircles[k]); delete squadCircles[k]; });
             
             const unitListEl = document.getElementById("unitList");
             if (unitListEl) unitListEl.innerHTML = "";
@@ -893,7 +958,7 @@
             });
         }
 
-        // --- 8. TELEMETRY, MERGE ENGINE & DEDUPLICATION ---
+        // --- 8. TELEMETRY LISTENER & MAP ENGINE ---
         function startListeningTelemetry() {
             if (isListening) return;
             isListening = true;
@@ -959,7 +1024,7 @@
             const now = Date.now();
             const unitListEl = document.getElementById("unitList");
 
-            // --- ADVANCED DEDUPLICATION & GHOST CLEANING ---
+            // --- ADVANCED DEDUPLICATION & AUTO-PURGING ENGINE ---
             const allKeys = Object.keys(data);
             const obsoleteKeysToDelete = new Set();
 
@@ -1034,36 +1099,251 @@
                 }
             });
 
-            // --- BUCKETING FOR SQUAD HIT MERGE ---
-            const mergedHitBuckets = {};
-            mergedHits.forEach(hitKey => {
-                mergedHitBuckets[hitKey] = [];
-            });
-
-            const standaloneKeys = [];
+            // --- PARTITION INTO MERGED SQUADS VS INDEPENDENT COMMANDOS ---
+            const squadGroups = {};       // canonicalKey -> Array of { key, unit, info }
+            const independentKeys = [];   // Keys rendered as individual markers
 
             Object.keys(data).forEach(key => {
                 const unit = data[key];
-                const meta = parseGroupAndHit(unit, key);
-                const hitKey = `${meta.group}|${meta.hit}`;
+                const info = getUnitGroupAndHit(unit, key);
 
-                if (mergedHits.has(hitKey)) {
-                    mergedHitBuckets[hitKey].push({ key, unit, meta });
-                    // Remove individual commando marker from map while hit is merged
+                if (mergedHits.has(info.canonicalHitKey)) {
+                    if (!squadGroups[info.canonicalHitKey]) {
+                        squadGroups[info.canonicalHitKey] = [];
+                    }
+                    squadGroups[info.canonicalHitKey].push({ key, unit, info });
+                    
+                    // Remove individual marker from map if previously drawn
                     if (markers[key]) { map.removeLayer(markers[key]); delete markers[key]; }
-                    delete markerHtmlCache[key];
                     if (accuracyCircles[key]) { map.removeLayer(accuracyCircles[key]); delete accuracyCircles[key]; }
                     if (tethers[key]) { map.removeLayer(tethers[key]); delete tethers[key]; }
-                    // Remove individual card from sidebar if present
-                    const indivCard = document.getElementById(`unit_card_${key}`);
-                    if (indivCard && indivCard.parentNode) indivCard.parentNode.removeChild(indivCard);
+                    
+                    // Remove individual card from roster
+                    const indCard = document.getElementById(`unit_card_${key}`);
+                    if (indCard && indCard.parentNode) indCard.parentNode.removeChild(indCard);
                 } else {
-                    standaloneKeys.push(key);
+                    independentKeys.push(key);
                 }
             });
 
-            // Sort standalone commandos
-            standaloneKeys.sort((a, b) => {
+            // Remove any old squad markers for hits that are no longer merged
+            Object.keys(squadMarkers).forEach(canonicalKey => {
+                if (!mergedHits.has(canonicalKey)) {
+                    map.removeLayer(squadMarkers[canonicalKey]);
+                    delete squadMarkers[canonicalKey];
+                    if (squadCircles[canonicalKey]) {
+                        map.removeLayer(squadCircles[canonicalKey]);
+                        delete squadCircles[canonicalKey];
+                    }
+                    const sqCard = document.getElementById(`squad_card_${canonicalKey}`);
+                    if (sqCard && sqCard.parentNode) sqCard.parentNode.removeChild(sqCard);
+                }
+            });
+
+            let onlineCount = 0;
+            let relayCount = 0;
+            let casualtyCount = 0;
+            let staleCount = 0;
+            let visibleEntitiesCount = 0;
+
+            // --- 1. RENDER MERGED SQUADS (AVERAGE CENTROID GPS) ---
+            Object.keys(squadGroups).forEach(canonicalKey => {
+                const members = squadGroups[canonicalKey];
+                if (members.length === 0) return;
+
+                visibleEntitiesCount++;
+
+                let sumLat = 0, sumLng = 0, validCoordCount = 0;
+                let hasCasualty = false;
+                let hasLiveGps = false;
+                let hasLiveRelay = false;
+                let hasGpsLost = false;
+                let casualtyUnitKey = null;
+                const memberLabels = [];
+
+                members.forEach(m => {
+                    const u = m.unit;
+                    const ageMs = now - (u.lastUpdated || 0);
+                    const isFresh = ageMs <= STALE_MS;
+                    const isRelayed = (u.status === "RELAYED_INDOOR" || !!u.relay_by || !!u.relayBy);
+                    const isExplicitOffline = (u.status === "OFFLINE");
+
+                    if (typeof u.lat === "number" && typeof u.lng === "number") {
+                        sumLat += u.lat;
+                        sumLng += u.lng;
+                        validCoordCount++;
+                    }
+
+                    if (u.casualty) {
+                        hasCasualty = true;
+                        casualtyCount++;
+                        casualtyUnitKey = m.key;
+                    }
+
+                    if (!isExplicitOffline) {
+                        if (u.status === "ONLINE" && !isRelayed && isFresh) hasLiveGps = true;
+                        else if (isRelayed && isFresh) hasLiveRelay = true;
+                        else if (!isFresh) hasGpsLost = true;
+                    }
+
+                    memberLabels.push(m.info.cdoNum || sanitizeHtml(u.callsign || m.key));
+                });
+
+                if (hasLiveGps) onlineCount++;
+                else if (hasLiveRelay) relayCount++;
+                else if (hasGpsLost) staleCount++;
+
+                // Compute Centroid (Average Location)
+                const avgLat = validCoordCount > 0 ? (sumLat / validCoordCount) : null;
+                const avgLng = validCoordCount > 0 ? (sumLng / validCoordCount) : null;
+
+                // Compute Formation Spread Radius
+                let maxSpread = 12; // Base squad footprint in meters
+                if (avgLat && avgLng) {
+                    members.forEach(m => {
+                        const u = m.unit;
+                        if (typeof u.lat === "number" && typeof u.lng === "number") {
+                            const d = map.distance([avgLat, avgLng], [u.lat, u.lng]);
+                            if (d > maxSpread) maxSpread = d;
+                        }
+                    });
+                }
+                maxSpread = Math.min(Math.max(maxSpread + 4, 10), 50);
+
+                const groupName = members[0].info.group;
+                const hitName = members[0].info.hit;
+                const initials = `${groupName.substring(0, 2).toUpperCase()}-H${hitName.replace(/[^0-9]/g, '')}`;
+
+                let squadStatusText = "● SQUAD ONLINE";
+                let squadBadgeColor = "var(--color-online)";
+                let squadMarkerClass = "marker-online";
+
+                if (hasCasualty) {
+                    squadStatusText = "🚨 SQUAD CASUALTY";
+                    squadBadgeColor = "var(--color-distress)";
+                    squadMarkerClass = "marker-casualty";
+                    if (avgLat && avgLng) latestCasualtyLatLng = [avgLat, avgLng];
+                    if (!activeCasualties.has(canonicalKey)) {
+                        activeCasualties.add(canonicalKey);
+                        if (!isInitialLoginLoad && !isSirenMuted) playDistressSiren();
+                    }
+                } else if (hasLiveGps) {
+                    squadStatusText = `● SQUAD ONLINE (${members.length} CDOS)`;
+                    squadBadgeColor = "var(--color-online)";
+                    squadMarkerClass = "marker-online";
+                } else if (hasLiveRelay) {
+                    squadStatusText = `📡 SQUAD RELAY (${members.length} CDOS)`;
+                    squadBadgeColor = "var(--color-relay)";
+                    squadMarkerClass = "marker-relay";
+                } else if (hasGpsLost) {
+                    squadStatusText = `⚠ SQUAD GPS LOST`;
+                    squadBadgeColor = "#ca8a04";
+                    squadMarkerClass = "marker-stale";
+                } else {
+                    squadStatusText = `SQUAD OFFLINE`;
+                    squadBadgeColor = "#64748b";
+                    squadMarkerClass = "marker-offline";
+                }
+
+                // Render Squad Centroid Marker on Map
+                if (avgLat && avgLng) {
+                    const squadLatLng = [avgLat, avgLng];
+                    const squadHtml = `
+                        <div class="squad-marker ${squadMarkerClass}">
+                            <div style="font-size:7px; color:#38bdf8; font-weight:bold;">SQUAD</div>
+                            <div>${initials}</div>
+                            <div style="font-size:7px; color:#fde68a;">${members.length}/6</div>
+                        </div>
+                    `;
+
+                    const popupHtml = `
+                        <strong>🔀 ${sanitizeHtml(groupName)} - ${sanitizeHtml(hitName)} (SQUAD FORMATION)</strong><br>
+                        Status: <strong>${squadStatusText}</strong><br>
+                        Centroid: ${avgLat.toFixed(6)}, ${avgLng.toFixed(6)}<br>
+                        Spread Radius: ±${maxSpread.toFixed(1)}m<br>
+                        Members: ${memberLabels.join(", ")}<br><br>
+                        <button onclick="unmergeHit('${canonicalKey}')" style="background:#dc2626; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer; width:100%;">
+                            🔄 UNMERGE SQUAD (SHOW INDIVIDUAL)
+                        </button>
+                    `;
+
+                    if (!squadMarkers[canonicalKey]) {
+                        squadMarkers[canonicalKey] = L.marker(squadLatLng, {
+                            icon: L.divIcon({ html: squadHtml, className: '', iconSize: [38, 38] })
+                        }).addTo(map);
+                        squadMarkers[canonicalKey].bindPopup(popupHtml);
+                    } else {
+                        squadMarkers[canonicalKey].setLatLng(squadLatLng);
+                        squadMarkers[canonicalKey].setIcon(L.divIcon({ html: squadHtml, className: '', iconSize: [38, 38] }));
+                        squadMarkers[canonicalKey].getPopup().setContent(popupHtml);
+                    }
+
+                    // Spread Footprint Circle
+                    const circleColor = hasCasualty ? '#dc2626' : (hasLiveRelay ? '#f59e0b' : '#38bdf8');
+                    if (!squadCircles[canonicalKey]) {
+                        squadCircles[canonicalKey] = L.circle(squadLatLng, {
+                            radius: maxSpread,
+                            color: circleColor,
+                            weight: 2,
+                            dashArray: '5, 5',
+                            fillColor: circleColor,
+                            fillOpacity: 0.12
+                        }).addTo(map);
+                    } else {
+                        squadCircles[canonicalKey].setLatLng(squadLatLng);
+                        squadCircles[canonicalKey].setRadius(maxSpread);
+                        squadCircles[canonicalKey].setStyle({
+                            color: circleColor,
+                            fillColor: circleColor
+                        });
+                    }
+                }
+
+                // Render Unified Squad Card in Sidebar Roster
+                let sqCard = document.getElementById(`squad_card_${canonicalKey}`);
+                if (!sqCard) {
+                    sqCard = document.createElement("div");
+                    sqCard.id = `squad_card_${canonicalKey}`;
+                    sqCard.setAttribute("data-key", canonicalKey);
+                    unitListEl.appendChild(sqCard);
+                }
+
+                sqCard.className = `unit-card card-squad ${hasCasualty ? 'card-casualty' : (hasLiveRelay ? 'card-relay' : 'card-online')}`;
+                sqCard.onclick = () => {
+                    if (avgLat && avgLng) {
+                        map.flyTo([avgLat, avgLng], 18, { animate: true, duration: 1.0 });
+                        if (squadMarkers[canonicalKey]) squadMarkers[canonicalKey].openPopup();
+                    }
+                };
+
+                sqCard.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#fff;">🔀 ${sanitizeHtml(groupName)} - ${sanitizeHtml(hitName)}</strong>
+                        <span style="font-size:0.75rem; font-weight:bold; color:${squadBadgeColor};">
+                            ${squadStatusText}
+                        </span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+                        CENTROID: ±${maxSpread.toFixed(1)}m SPREAD | ${members.length}/6 COMMANDOS
+                    </div>
+                    <div style="font-size:0.68rem; color:#7dd3fc; margin-top:2px;">
+                        MEMBERS: ${memberLabels.join(", ")}
+                    </div>
+                    <button class="btn-tool" style="width:100%; margin-top:6px; background:#1e293b; color:#fff;" 
+                            onclick="event.stopPropagation(); unmergeHit('${canonicalKey}')">
+                        🔄 UNMERGE SQUAD (SHOW 6 INDIVIDUAL)
+                    </button>
+                    ${(hasCasualty && casualtyUnitKey && knownUnits[casualtyUnitKey] && knownUnits[casualtyUnitKey].audioActive) ? `
+                        <button id="audioBtn_${casualtyUnitKey}" class="btn-listen ${currentListeningUnit === casualtyUnitKey ? 'monitoring' : ''}" 
+                                onclick="event.stopPropagation(); toggleAudioListen('${casualtyUnitKey}')">
+                            ${currentListeningUnit === casualtyUnitKey ? '🔊 SPEAKER: ON (MUTE)' : '🎙️ LISTEN TO CASUALTY MIC'}
+                        </button>
+                    ` : ''}
+                `;
+            });
+
+            // --- 2. RENDER INDEPENDENT COMMANDOS ---
+            independentKeys.sort((a, b) => {
                 const uA = data[a];
                 const uB = data[b];
                 const ageA = now - (uA.lastUpdated || 0);
@@ -1087,241 +1367,13 @@
                 const rankB = getRank(isCasB, isRelB, isLiveB, uB);
 
                 if (rankA !== rankB) return rankA - rankB;
-                return String(uA.callsign || a).localeCompare(String(uB.callsign || b));
+
+                const nameA = String(uA.callsign || a).toLowerCase();
+                const nameB = String(uB.callsign || b).toLowerCase();
+                return nameA.localeCompare(nameB);
             });
 
-            let onlineCount = 0;
-            let relayCount = 0;
-            let casualtyCount = 0;
-            let staleCount = 0;
-            let visibleEntitiesCount = 0;
-
-            // --- RENDER MERGED HIT SQUAD ENTITIES ---
-            mergedHits.forEach(hitKey => {
-                const members = mergedHitBuckets[hitKey] || [];
-                const parts = hitKey.split("|");
-                const grpName = parts[0];
-                const hitName = parts[1];
-                const domSafeHitId = hitKey.replace(/[^a-zA-Z0-9]/g, '_');
-
-                let sumLat = 0, sumLng = 0, validLocCount = 0;
-                let maxAcc = 0;
-                let squadCasualty = false;
-                let squadRelay = false;
-                let squadOnline = false;
-                let squadStale = false;
-                let newestTimestamp = 0;
-
-                members.forEach(item => {
-                    const u = item.unit;
-                    const ageMs = now - (u.lastUpdated || 0);
-                    const isFresh = ageMs <= STALE_MS;
-                    const isRel = (u.status === "RELAYED_INDOOR" || !!u.relay_by || !!u.relayBy);
-                    const isLiveGps = (u.status === "ONLINE" && !isRel && isFresh);
-                    const isLiveRel = (isRel && isFresh && u.status !== "OFFLINE");
-                    const isLost = (u.status !== "OFFLINE" && ((!isFresh && (u.status === "ONLINE" || isRel)) || u.status === "STALE"));
-
-                    if (u.casualty) squadCasualty = true;
-                    if (isLiveRel) squadRelay = true;
-                    if (isLiveGps) squadOnline = true;
-                    if (isLost) squadStale = true;
-
-                    if ((u.lastUpdated || 0) > newestTimestamp) newestTimestamp = u.lastUpdated;
-
-                    if (typeof u.lat === 'number' && typeof u.lng === 'number' && u.lat !== 0 && u.lng !== 0) {
-                        sumLat += u.lat;
-                        sumLng += u.lng;
-                        validLocCount++;
-                        if ((u.accuracy || 0) > maxAcc) maxAcc = u.accuracy;
-                    }
-                });
-
-                if (squadCasualty) casualtyCount++;
-                else if (squadRelay) relayCount++;
-                else if (squadOnline) onlineCount++;
-                else if (squadStale) staleCount++;
-
-                const squadOffline = !squadOnline && !squadRelay && !squadStale;
-
-                if (hideOffline && squadOffline && !squadCasualty) {
-                    if (mergedMarkers[hitKey]) { map.removeLayer(mergedMarkers[hitKey]); delete mergedMarkers[hitKey]; }
-                    if (mergedCircles[hitKey]) { map.removeLayer(mergedCircles[hitKey]); delete mergedCircles[hitKey]; }
-                    const card = document.getElementById(`merged_card_${domSafeHitId}`);
-                    if (card && card.parentNode) card.parentNode.removeChild(card);
-                    return;
-                }
-
-                visibleEntitiesCount++;
-
-                // 1. Calculate Average GPS Location
-                let avgLatLng = null;
-                let squadRadius = 15;
-
-                if (validLocCount > 0) {
-                    const avgLat = sumLat / validLocCount;
-                    const avgLng = sumLng / validLocCount;
-                    avgLatLng = [avgLat, avgLng];
-
-                    let maxDispersion = 0;
-                    members.forEach(item => {
-                        const u = item.unit;
-                        if (typeof u.lat === 'number' && typeof u.lng === 'number') {
-                            const d = map.distance(avgLatLng, [u.lat, u.lng]);
-                            if (d > maxDispersion) maxDispersion = d;
-                        }
-                    });
-                    squadRadius = Math.max(10, Math.min(maxDispersion + (maxAcc || 5), 75));
-
-                    // Merged Map Marker Styling
-                    let markerClass = "marker-online";
-                    let statusLabel = `ONLINE · ${validLocCount}/6 GPS`;
-
-                    if (squadCasualty) {
-                        markerClass = "marker-casualty";
-                        statusLabel = "🚨 CASUALTY IN SQUAD";
-                        latestCasualtyLatLng = avgLatLng;
-                        if (!isSirenMuted && !isInitialLoginLoad) playDistressSiren();
-                    } else if (squadRelay) {
-                        markerClass = "marker-relay";
-                        statusLabel = `BLE RELAY · ${validLocCount}/6 GPS`;
-                    } else if (squadStale) {
-                        markerClass = "marker-stale";
-                        statusLabel = `GPS LOST · ${validLocCount}/6 GPS`;
-                    } else if (squadOffline) {
-                        markerClass = "marker-offline";
-                        statusLabel = "SQUAD OFFLINE";
-                    }
-
-                    const squadShort = `${grpName.substring(0,1)}-${hitName.replace(/\s+/g,'').toUpperCase()}`;
-                    const markerHtml = `
-                        <div class="merged-squad-marker ${markerClass}">
-                            <div style="font-size:8px; font-weight:bold; letter-spacing:0.5px;">⚡ ${squadShort}</div>
-                            <div style="font-size:10px; font-weight:900;">${validLocCount}/6 CDOS</div>
-                        </div>
-                    `;
-
-                    // Generate Member Detail List for Popup
-                    let memberListHtml = members.map(m => {
-                        const callsign = sanitizeHtml(m.unit.callsign || m.key);
-                        const cdoStatus = m.unit.casualty ? '<span style="color:#ef4444; font-weight:bold;">🚨 CASUALTY</span>' 
-                            : (m.unit.status === 'RELAYED_INDOOR' ? '<span style="color:#f59e0b;">📡 RELAY</span>' 
-                            : (m.unit.status === 'ONLINE' ? '<span style="color:#22c55e;">● ONLINE</span>' : 'OFFLINE'));
-                        const acc = m.unit.accuracy ? `±${m.unit.accuracy.toFixed(1)}m` : 'N/A';
-                        return `• ${callsign}: ${cdoStatus} (${acc})`;
-                    }).join("<br>");
-
-                    if (!memberListHtml) memberListHtml = "No commando telemetry reported yet.";
-
-                    const popupHtml = `
-                        <strong>⚡ ${sanitizeHtml(grpName)} - ${sanitizeHtml(hitName)}</strong><br>
-                        <em>[SQUAD MERGED: AVERAGE GPS]</em><br>
-                        <strong>Avg Lat:</strong> ${avgLat.toFixed(6)}<br>
-                        <strong>Avg Lng:</strong> ${avgLng.toFixed(6)}<br>
-                        <strong>Squad Spread:</strong> ±${squadRadius.toFixed(0)}m<br>
-                        <strong>Status:</strong> ${statusLabel}<br>
-                        <hr style="border-color:#334155; margin:5px 0;">
-                        <strong>Team Roster (${members.length}/6):</strong><br>
-                        <div style="font-size:11px; margin-top:3px; max-height:100px; overflow-y:auto;">
-                            ${memberListHtml}
-                        </div>
-                        <button onclick="unmergeHit('${hitKey}')" style="width:100%; margin-top:8px; padding:5px; background:#d97706; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
-                            🔓 UNMERGE HIT (SHOW INDIVIDUAL LOCATIONS)
-                        </button>
-                    `;
-
-                    if (!mergedMarkers[hitKey]) {
-                        mergedMarkers[hitKey] = L.marker(avgLatLng, {
-                            icon: L.divIcon({ html: markerHtml, className: '', iconSize: [58, 32] })
-                        }).addTo(map);
-                        mergedMarkers[hitKey].bindPopup(popupHtml);
-                        mergedMarkerHtmlCache[hitKey] = markerHtml;
-                    } else {
-                        mergedMarkers[hitKey].setLatLng(avgLatLng);
-                        if (mergedMarkerHtmlCache[hitKey] !== markerHtml) {
-                            mergedMarkers[hitKey].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [58, 32] }));
-                            mergedMarkerHtmlCache[hitKey] = markerHtml;
-                        }
-                        mergedMarkers[hitKey].getPopup().setContent(popupHtml);
-                    }
-
-                    // Spread Footprint Circle
-                    const circleColor = squadCasualty ? '#dc2626' : (squadRelay ? '#f59e0b' : '#38bdf8');
-                    if (!mergedCircles[hitKey]) {
-                        mergedCircles[hitKey] = L.circle(avgLatLng, {
-                            radius: squadRadius,
-                            color: circleColor,
-                            weight: 2,
-                            dashArray: '6, 6',
-                            fillOpacity: 0.12,
-                            fillColor: circleColor
-                        }).addTo(map);
-                    } else {
-                        mergedCircles[hitKey].setLatLng(avgLatLng);
-                        mergedCircles[hitKey].setRadius(squadRadius);
-                        mergedCircles[hitKey].setStyle({ color: circleColor, fillColor: circleColor });
-                    }
-                } else {
-                    if (mergedMarkers[hitKey]) { map.removeLayer(mergedMarkers[hitKey]); delete mergedMarkers[hitKey]; }
-                    if (mergedCircles[hitKey]) { map.removeLayer(mergedCircles[hitKey]); delete mergedCircles[hitKey]; }
-                }
-
-                // 2. Render Merged Card in Sidebar Roster
-                let mergedCard = document.getElementById(`merged_card_${domSafeHitId}`);
-                if (!mergedCard) {
-                    mergedCard = document.createElement("div");
-                    mergedCard.id = `merged_card_${domSafeHitId}`;
-                    mergedCard.setAttribute("data-merged-hit", hitKey);
-                    unitListEl.appendChild(mergedCard);
-                }
-                unitListEl.appendChild(mergedCard);
-
-                let cardClass = squadCasualty ? "card-merged-squad casualty" : "card-merged-squad";
-                let statusBadgeText = squadCasualty ? "🚨 CASUALTY IN HIT" : (squadRelay ? "📡 RELAY SQUAD" : (squadOnline ? "● SQUAD ONLINE" : "SQUAD OFFLINE"));
-                let statusBadgeColor = squadCasualty ? "var(--color-distress)" : (squadRelay ? "var(--color-relay)" : (squadOnline ? "var(--color-online)" : "#64748b"));
-
-                mergedCard.className = `unit-card ${cardClass}`;
-                mergedCard.onclick = () => focusMergedSquad(hitKey);
-
-                // Members status chips
-                const memberChipsHtml = members.map(m => {
-                    const shortCdo = String(m.unit.callsign || m.key).replace(/.*CDO-?(\d+).*/i, 'C$1');
-                    const chipColor = m.unit.casualty ? '#dc2626' : (m.unit.status === 'RELAYED_INDOOR' ? '#f59e0b' : (m.unit.status === 'ONLINE' ? '#16a34a' : '#475569'));
-                    return `<span style="background:${chipColor}; color:#fff; font-size:9px; font-weight:bold; padding:2px 5px; border-radius:3px;">${shortCdo}</span>`;
-                }).join(" ");
-
-                mergedCard.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:#38bdf8; font-size:0.95rem;">⚡ ${sanitizeHtml(grpName)} - ${sanitizeHtml(hitName)}</strong>
-                        <span style="font-size:0.75rem; font-weight:900; color:${statusBadgeColor}">
-                            ${statusBadgeText}
-                        </span>
-                    </div>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-                        [MERGED HIT] AVG GPS: ${avgLatLng ? `${avgLatLng[0].toFixed(5)},${avgLatLng[1].toFixed(5)}` : 'NO GPS'} | SPREAD: ±${squadRadius.toFixed(0)}m
-                    </div>
-                    <div style="display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; align-items:center;">
-                        <span style="font-size:0.68rem; color:var(--text-muted);">COMMANDOS (${members.length}/6):</span>
-                        ${memberChipsHtml || '<span style="font-size:0.68rem; color:#64748b;">Waiting for units...</span>'}
-                    </div>
-                    <div style="display:flex; gap:6px; margin-top:8px;">
-                        <button onclick="event.stopPropagation(); unmergeHit('${hitKey}')" 
-                                style="flex:1; padding:6px; font-size:0.72rem; font-weight:bold; background:#d97706; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                            🔓 UNMERGE (SHOW ALL 6 SEPARATELY)
-                        </button>
-                    </div>
-                `;
-            });
-
-            // Clean up unmerged cards from sidebar
-            Array.from(unitListEl.children).forEach(child => {
-                const mergedAttr = child.getAttribute("data-merged-hit");
-                if (mergedAttr && !mergedHits.has(mergedAttr)) {
-                    unitListEl.removeChild(child);
-                }
-            });
-
-            // --- RENDER STANDALONE COMMANDOS ---
-            standaloneKeys.forEach((key) => {
+            independentKeys.forEach((key) => {
                 const unit = data[key];
                 const isCasualty = !!unit.casualty;
                 const isRelayed = (unit.status === "RELAYED_INDOOR" || !!unit.relay_by || !!unit.relayBy);
@@ -1368,7 +1420,7 @@
                 const ageSec = Math.max(0, Math.round(ageMs / 1000));
                 const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
 
-                // Individual Map Marker
+                // Map Markers
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
                     
@@ -1458,7 +1510,7 @@
                         }
                     }
 
-                    // BLE Dynamic Tether Line
+                    // Dynamic Tether Line
                     if (isLiveRelay && relaySource && (data[relaySource] || lastPositions[relaySource])) {
                         const parentUnit = data[relaySource];
                         const parentLatLng = (parentUnit && parentUnit.lat && parentUnit.lng) 
@@ -1485,7 +1537,7 @@
                         }
                     }
 
-                    // Traveled path segments
+                    // Path Segments
                     if (!unitSegments[key]) unitSegments[key] = [];
 
                     if (lastPositions[key]) {
@@ -1515,7 +1567,7 @@
                     }
                 }
 
-                // In-place individual roster update
+                // In-place individual roster card
                 let card = document.getElementById(`unit_card_${key}`);
                 if (!card) {
                     card = document.createElement("div");
@@ -1578,10 +1630,10 @@
                 `;
             });
 
-            // Clean up standalone cards
+            // Cleanup cards of units no longer present
             Array.from(unitListEl.children).forEach(child => {
                 const cardKey = child.getAttribute("data-key");
-                if (cardKey && (!data[cardKey] || mergedHits.has(`${parseGroupAndHit(data[cardKey], cardKey).group}|${parseGroupAndHit(data[cardKey], cardKey).hit}`))) {
+                if (cardKey && !data[cardKey] && !squadGroups[cardKey]) {
                     unitListEl.removeChild(child);
                 }
             });
@@ -1590,13 +1642,13 @@
             document.getElementById("relayCount").innerText = relayCount;
             document.getElementById("casualtyCount").innerText = casualtyCount;
             document.getElementById("staleCount").innerText = staleCount;
-            document.getElementById("totalUnitsBadge").innerText = `${visibleEntitiesCount} OPERATIONAL`;
+            document.getElementById("totalUnitsBadge").innerText = `${visibleEntitiesCount} ELEMENTS`;
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
         // --- 9. MANUAL PURGE DATABASE GHOSTS ---
         async function purgeDatabaseGhosts() {
-            const choice = confirm("PURGE GHOST ENTRIES?\n\nClick [OK] to clean stale / duplicate entries.\nActive commandos and fresh casualties will not be affected.");
+            const choice = confirm("PURGE GHOST ENTRIES?\n\nClick [OK] to clean stale / duplicate entries.\n(To reset and wipe ALL entries including old casualties, hold Shift or use browser console).");
             if (!choice) return;
 
             const now = Date.now();
@@ -1659,4 +1711,297 @@
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById("sidebarPanel");
                 const btn = document.getElementById("toggleRosterBtn");
-                if (sidebar && sidebar.style.display !== "none")
+                if (sidebar && sidebar.style.display !== "none") {
+                    sidebar.style.display = "none";
+                    if (btn) {
+                        btn.innerText = "👁️ SHOW ROSTER";
+                        btn.classList.remove("active");
+                    }
+                    setTimeout(() => map.invalidateSize(), 150);
+                }
+            }
+        }
+
+        function focusLatestCasualty() {
+            if (latestCasualtyLatLng) {
+                map.flyTo(latestCasualtyLatLng, 18, {
+                    animate: true,
+                    duration: 1.0,
+                    easeLinearity: 0.25
+                });
+            }
+        }
+
+        // --- 11. TACTICAL DISTRESS SIREN ---
+        function playDistressSiren() {
+            if (isSirenMuted || isSirenPlaying) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') return;
+
+                isSirenPlaying = true;
+                const t = audioCtx.currentTime;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                activeSirenOsc = osc;
+                osc.type = "sawtooth";
+
+                for (let i = 0; i < 5; i++) {
+                    const step = i * 0.6;
+                    osc.frequency.setValueAtTime(850, t + step);
+                    osc.frequency.exponentialRampToValueAtTime(420, t + step + 0.3);
+                    osc.frequency.exponentialRampToValueAtTime(850, t + step + 0.6);
+                }
+
+                gain.gain.setValueAtTime(0.25, t);
+                gain.gain.setValueAtTime(0.25, t + 2.7);
+                gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t);
+                osc.stop(t + 3.0);
+
+                setTimeout(() => {
+                    isSirenPlaying = false;
+                    activeSirenOsc = null;
+                }, 3000);
+            } catch (e) {
+                isSirenPlaying = false;
+                activeSirenOsc = null;
+            }
+        }
+
+        function toggleSirenMute() {
+            isSirenMuted = !isSirenMuted;
+            const btn = document.getElementById("sirenMuteBtn");
+            if (isSirenMuted) {
+                btn.innerText = "🔕 SIREN: OFF";
+                btn.classList.add("active");
+                if (activeSirenOsc) {
+                    try { activeSirenOsc.stop(); } catch (e) {}
+                    activeSirenOsc = null;
+                }
+                isSirenPlaying = false;
+            } else {
+                btn.innerText = "🔔 SIREN: ON";
+                btn.classList.remove("active");
+            }
+        }
+
+        // --- 12. AUDIO INTERCEPT (WebRTC) ---
+        async function toggleAudioListen(unitKey) {
+            const player = document.getElementById("remoteAudioPlayer");
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            if (currentListeningUnit === unitKey) {
+                stopAudioMonitoring();
+                return;
+            }
+
+            stopAudioMonitoring();
+
+            currentListeningUnit = unitKey;
+            const btn = document.getElementById(`audioBtn_${unitKey}`);
+            if (btn) {
+                btn.classList.add("monitoring");
+                btn.innerText = "⏳ CONNECTING...";
+            }
+
+            try {
+                await database.ref(`webrtc/${unitKey}/m_candidates`).remove();
+                await database.ref(`webrtc/${unitKey}/answer`).remove();
+
+                const pc = new RTCPeerConnection(rtcConfig);
+                activePeerConnection = pc;
+
+                pc.addTransceiver('audio', { direction: 'recvonly' });
+
+                pc.ontrack = (event) => {
+                    const stream = (event.streams && event.streams[0]) 
+                        ? event.streams[0] 
+                        : new MediaStream([event.track]);
+
+                    player.srcObject = stream;
+                    player.muted = false;
+                    player.volume = 1.0;
+                    player.play().catch(e => console.warn("Autoplay warning:", e));
+
+                    try {
+                        if (audioSourceNode) audioSourceNode.disconnect();
+                        audioSourceNode = audioCtx.createMediaStreamSource(stream);
+                        audioSourceNode.connect(audioCtx.destination);
+                    } catch (err) {}
+
+                    if (btn) {
+                        btn.classList.add("monitoring");
+                        btn.innerText = "🔊 SPEAKER: ON (MUTE)";
+                    }
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+                        if (btn && currentListeningUnit === unitKey) {
+                            btn.innerText = "⚠️ RECONNECTING...";
+                        }
+                    }
+                };
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate && pc.signalingState !== "closed") {
+                        database.ref(`webrtc/${unitKey}/m_candidates`).push(event.candidate.toJSON());
+                    }
+                };
+
+                const offerSnap = await database.ref(`webrtc/${unitKey}/offer`).get();
+                const offer = offerSnap.val();
+                if (!offer) {
+                    alert("Audio stream not ready or commando offline.");
+                    stopAudioMonitoring();
+                    return;
+                }
+
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await database.ref(`webrtc/${unitKey}/answer`).set({ sdp: answer.sdp, type: answer.type });
+
+                candidatesListenerRef = database.ref(`webrtc/${unitKey}/c_candidates`);
+                candidatesListenerRef.on("child_added", async (snap) => {
+                    const candidate = snap.val();
+                    if (candidate && pc && pc.signalingState !== "closed" && pc.remoteDescription) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (err) {}
+                    }
+                });
+            } catch (err) {
+                alert("Failed to establish audio link: " + err.message);
+                stopAudioMonitoring();
+            }
+        }
+
+        function stopAudioMonitoring() {
+            if (candidatesListenerRef) {
+                candidatesListenerRef.off();
+                candidatesListenerRef = null;
+            }
+            if (audioSourceNode) {
+                try { audioSourceNode.disconnect(); } catch (e) {}
+                audioSourceNode = null;
+            }
+            if (activePeerConnection) {
+                activePeerConnection.close();
+                activePeerConnection = null;
+            }
+            const player = document.getElementById("remoteAudioPlayer");
+            if (player) {
+                player.srcObject = null;
+                player.pause();
+            }
+
+            if (currentListeningUnit) {
+                const btn = document.getElementById(`audioBtn_${currentListeningUnit}`);
+                if (btn) {
+                    btn.classList.remove("monitoring");
+                    btn.innerText = "🎙️ TURN SPEAKER ON (LISTEN)";
+                }
+                currentListeningUnit = null;
+            }
+        }
+
+        // --- 13. SITREP MARKERS ---
+        function setQuickMarker(type) {
+            if (activePlacementType === type) {
+                resetPlacementState();
+            } else {
+                resetPlacementState();
+                activePlacementType = type;
+                if (type === 'HOSTILE') document.getElementById("btnHostile").classList.add("active");
+                if (type === 'HAZARD') document.getElementById("btnIed").classList.add("active");
+                if (type === 'BREACH') document.getElementById("btnBreach").classList.add("active");
+            }
+        }
+
+        function resetPlacementState() {
+            activePlacementType = null;
+            document.getElementById("btnHostile").classList.remove("active");
+            document.getElementById("btnIed").classList.remove("active");
+            document.getElementById("btnBreach").classList.remove("active");
+        }
+
+        function placeSitRep(latlng, type) {
+            let label = "PIN";
+            let color = "#ef4444";
+            if (type === "HOSTILE") { label = "HOSTILE"; color = "#dc2626"; }
+            else if (type === "BREACH") { label = "BREACH"; color = "#16a34a"; }
+            else if (type === "HAZARD") { label = "IED / HAZARD"; color = "#d97706"; }
+
+            const pinIcon = L.divIcon({
+                html: `<div style="background:${color}; color:#fff; font-size:10px; font-weight:bold; padding:3px 6px; border-radius:4px; border:1px solid #fff; box-shadow:0 0 8px rgba(0,0,0,0.8);">${label}</div>`,
+                className: '',
+                iconSize: [80, 20]
+            });
+            const sitMarker = L.marker(latlng, { icon: pinIcon }).addTo(map)
+                .bindPopup(`<strong>${label}</strong><br>LAT: ${latlng.lat.toFixed(6)}<br>LNG: ${latlng.lng.toFixed(6)}`);
+            
+            situationMarkers.push(sitMarker);
+        }
+
+        map.on('contextmenu', (e) => {
+            const pinType = prompt("SELECT SITREP MARKER:\n1 = 🔴 Hostile / Terrorist\n2 = 🟢 Breach / Entry Point\n3 = ⚠️ IED / Hazard Zone", "1");
+            if (!pinType) return;
+
+            let type = "HOSTILE";
+            if (pinType === "1") type = "HOSTILE";
+            else if (pinType === "2") type = "BREACH";
+            else if (pinType === "3") type = "HAZARD";
+
+            placeSitRep(e.latlng, type);
+        });
+
+        function clearSitRepMarkers() {
+            situationMarkers.forEach(marker => map.removeLayer(marker));
+            situationMarkers.length = 0;
+        }
+
+        // --- 14. MEASUREMENT & MAP CLICKS ---
+        let measureActive = false;
+        let measurePoints = [];
+        let measureLine = null;
+
+        function toggleMeasureTool() {
+            resetPlacementState();
+            measureActive = !measureActive;
+            measurePoints = [];
+            if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+            document.getElementById("measureBtn").classList.toggle("active", measureActive);
+            document.getElementById("measureBtn").innerText = measureActive ? "📏 2 POINTS" : "📏 MEASURE";
+        }
+
+        map.on('click', (e) => {
+            if (activePlacementType) {
+                placeSitRep(e.latlng, activePlacementType);
+                resetPlacementState();
+                return;
+            }
+
+            if (!measureActive) return;
+            measurePoints.push(e.latlng);
+
+            if (measurePoints.length === 2) {
+                const dist = measurePoints[0].distanceTo(measurePoints[1]);
+                measureLine = L.polyline(measurePoints, { color: '#f59e0b', weight: 3, dashArray: '5, 5' }).addTo(map);
+                measureLine.bindPopup(`<strong>SEPARATION:</strong> ${dist.toFixed(1)} meters`).openPopup();
+                measureActive = false;
+                document.getElementById("measureBtn").classList.remove("active");
+                document.getElementById("measureBtn").innerText = "📏 MEASURE";
+            }
+        });
+    </script>
+</body>
+</html>
