@@ -16,6 +16,7 @@
             
             /* Status Colors */
             --color-online: #15803d;             /* Dark Green */
+            --color-relay: #f59e0b;              /* Amber / BLE Proximity Relay */
             --color-offline: rgba(148, 163, 184, 0.35); /* Very Faint */
             --color-gps-lost: rgba(234, 179, 8, 0.5);   /* Faint Yellow */
             --color-distress: #dc2626;           /* Solid Red */
@@ -130,7 +131,7 @@
         }
         .unit-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 
-        /* Commando Cards - Zero Blinking */
+        /* Commando Cards */
         .unit-card { 
             background: #0f172a; border: 1px solid var(--border); border-radius: 6px; 
             padding: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s;
@@ -144,6 +145,11 @@
             border: 1px solid var(--color-online);
             border-left: 4px solid var(--color-online);
             background: #0f172a;
+        }
+        .unit-card.card-relay {
+            border: 1px solid var(--color-relay);
+            border-left: 4px solid var(--color-relay);
+            background: rgba(245, 158, 11, 0.12);
         }
         .unit-card.card-casualty {
             border: 2px solid var(--color-distress);
@@ -181,7 +187,7 @@
         .btn-breach.active { background: #16a34a; color: #fff; font-weight: bold; }
         .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
 
-        /* Tactical Markers - Zero Blinking */
+        /* Tactical Markers */
         .commando-marker {
             width: 28px; height: 28px; border-radius: 50%; display: flex; 
             align-items: center; justify-content: center; font-size: 11px; 
@@ -191,6 +197,11 @@
         .commando-marker.marker-online {
             background: var(--color-online) !important;
             border-color: #86efac;
+        }
+        .commando-marker.marker-relay {
+            background: var(--color-relay) !important;
+            border-color: #fde68a;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.85);
         }
         .commando-marker.marker-casualty { 
             background: var(--color-distress) !important; 
@@ -286,6 +297,7 @@
             <div class="op-title">FORCE ONE TACTICAL C2</div>
             <div class="stat-badges">
                 <div class="badge" style="color:var(--color-online);">ONLINE: <span id="onlineCount">0</span></div>
+                <div class="badge" style="color:var(--color-relay);">RELAYED: <span id="relayCount">0</span></div>
                 <div class="badge" style="color:var(--color-distress);">CASUALTIES: <span id="casualtyCount">0</span></div>
                 <div class="badge" style="color:#ca8a04;">GPS LOST: <span id="staleCount">0</span></div>
             </div>
@@ -388,13 +400,15 @@
         const accuracyCircles = {};  
         const unitSegments = {};     
         const lastPositions = {};    
+        const tethers = {};          // BLE Proximity dynamic tether lines
+        const relayCircles = {};     // BLE Proximity search radius bubbles
         const situationMarkers = []; 
         let latestCasualtyLatLng = null;
 
         let telemetryRef = null;
         let isListening = false;
         let staleTimer = null;
-        let hideOffline = false; // Toggle state to filter offline commandos
+        let hideOffline = false; 
         const knownUnits = {};       
         const STOP_STATUSES = ["STOPPED", "ENDED"]; 
         const STALE_MS = 30000;      
@@ -561,6 +575,7 @@
             if (unitListEl) unitListEl.innerHTML = "";
             
             document.getElementById("onlineCount").innerText = "0";
+            document.getElementById("relayCount").innerText = "0";
             document.getElementById("casualtyCount").innerText = "0";
             document.getElementById("staleCount").innerText = "0";
             document.getElementById("totalUnitsBadge").innerText = "0 UNITS";
@@ -600,7 +615,8 @@
                     if (!u) return;
 
                     const ageMs = now - (u.lastUpdated || 0);
-                    const isLive = (u.status === "ONLINE" && ageMs <= STALE_MS);
+                    const isRelayed = (u.status === "RELAYED_INDOOR" || !!u.relay_by || !!u.relayBy);
+                    const isLive = ((u.status === "ONLINE" || isRelayed) && ageMs <= STALE_MS);
 
                     if (isInitialLoginLoad && !isLive) {
                         return;
@@ -612,11 +628,11 @@
                 renderTelemetry();
                 isInitialLoginLoad = false;
             }, (error) => {
-                console.error("Firebase Telemetry Error (Permission Denied):", error);
+                console.error("Firebase Telemetry Error:", error);
             });
 
             if (staleTimer) clearInterval(staleTimer);
-            staleTimer = setInterval(renderTelemetry, 4000);
+            staleTimer = setInterval(renderTelemetry, 3500);
         }
 
         function removeUnitFromMap(k) {
@@ -624,6 +640,8 @@
             delete markerHtmlCache[k];
             if (accuracyCircles[k]) { map.removeLayer(accuracyCircles[k]); delete accuracyCircles[k]; }
             if (unitSegments[k]) { unitSegments[k].forEach(seg => map.removeLayer(seg)); delete unitSegments[k]; }
+            if (tethers[k]) { map.removeLayer(tethers[k]); delete tethers[k]; }
+            if (relayCircles[k]) { map.removeLayer(relayCircles[k]); delete relayCircles[k]; }
             delete lastPositions[k];
             activeCasualties.delete(k);
 
@@ -675,20 +693,23 @@
                 const uB = data[b];
                 const ageA = now - (uA.lastUpdated || 0);
                 const ageB = now - (uB.lastUpdated || 0);
-                const isLiveA = (uA.status === "ONLINE" && ageA <= STALE_MS);
-                const isLiveB = (uB.status === "ONLINE" && ageB <= STALE_MS);
+                const isRelA = (uA.status === "RELAYED_INDOOR" || !!uA.relay_by || !!uA.relayBy);
+                const isRelB = (uB.status === "RELAYED_INDOOR" || !!uB.relay_by || !!uB.relayBy);
+                const isLiveA = ((uA.status === "ONLINE" || isRelA) && ageA <= STALE_MS);
+                const isLiveB = ((uB.status === "ONLINE" || isRelB) && ageB <= STALE_MS);
                 const isCasA = !!uA.casualty;
                 const isCasB = !!uB.casualty;
 
-                const getRank = (isCas, isLive, u) => {
+                const getRank = (isCas, isRel, isLive, u) => {
                     if (isCas) return 0;
-                    if (isLive) return 1;
-                    if (u.status === "ONLINE" || u.status === "STALE") return 2;
-                    return 3;
+                    if (isRel && isLive) return 1;
+                    if (isLive) return 2;
+                    if (u.status === "ONLINE" || u.status === "STALE" || isRel) return 3;
+                    return 4;
                 };
 
-                const rankA = getRank(isCasA, isLiveA, uA);
-                const rankB = getRank(isCasB, isLiveB, uB);
+                const rankA = getRank(isCasA, isRelA, isLiveA, uA);
+                const rankB = getRank(isCasB, isRelB, isLiveB, uB);
 
                 if (rankA !== rankB) return rankA - rankB;
 
@@ -698,6 +719,7 @@
             });
 
             let onlineCount = 0;
+            let relayCount = 0;
             let casualtyCount = 0;
             let staleCount = 0;
             let visibleCount = 0;
@@ -705,12 +727,17 @@
             sortedKeys.forEach((key) => {
                 const unit = data[key];
                 const isCasualty = !!unit.casualty;
+                const isRelayed = (unit.status === "RELAYED_INDOOR" || !!unit.relay_by || !!unit.relayBy);
                 const ageMs = now - (unit.lastUpdated || 0);
-                const isLive = (unit.status === "ONLINE" && ageMs <= STALE_MS);
-                const isGpsLost = (unit.status === "ONLINE" && !isLive) || unit.status === "STALE";
-                const isOffline = !isLive && !isGpsLost;
+                const isFresh = ageMs <= STALE_MS;
 
-                if (isLive) onlineCount++;
+                const isLiveGps = (unit.status === "ONLINE" && !isRelayed && isFresh);
+                const isLiveRelay = (isRelayed && isFresh);
+                const isGpsLost = (!isFresh && (unit.status === "ONLINE" || isRelayed)) || unit.status === "STALE";
+                const isOffline = !isLiveGps && !isLiveRelay && !isGpsLost;
+
+                if (isLiveGps) onlineCount++;
+                else if (isLiveRelay) relayCount++;
                 else if (isGpsLost) staleCount++;
 
                 if (isCasualty) {
@@ -729,24 +756,7 @@
 
                 // If online-only mode is active, hide offline units (never hide casualties)
                 if (hideOffline && isOffline && !isCasualty) {
-                    if (markers[key]) {
-                        map.removeLayer(markers[key]);
-                        delete markers[key];
-                        delete markerHtmlCache[key];
-                    }
-                    if (accuracyCircles[key]) {
-                        map.removeLayer(accuracyCircles[key]);
-                        delete accuracyCircles[key];
-                    }
-                    if (unitSegments[key]) {
-                        unitSegments[key].forEach(seg => {
-                            if (map.hasLayer(seg)) map.removeLayer(seg);
-                        });
-                    }
-                    const card = document.getElementById(`unit_card_${key}`);
-                    if (card && card.parentNode) {
-                        card.parentNode.removeChild(card);
-                    }
+                    removeUnitFromMap(key);
                     return;
                 }
 
@@ -762,21 +772,32 @@
                 const ageSec = Math.max(0, Math.round(ageMs / 1000));
                 const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
 
-                // --- MAP MARKERS & PATHS ---
+                // --- MAP MARKERS & BLE RELAY TETHERS ---
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
                     
-                    // Cap accuracy radius to 35m max
-                    const accRadius = Math.min(Math.max(unit.accuracy || 5, 2), 35);
+                    // Approximate proximity search radius from RSSI if relayed, otherwise GPS accuracy
+                    let accRadius = Math.min(Math.max(unit.accuracy || 5, 2), 35);
+                    if (isRelayed && unit.rssi) {
+                        // Log-distance path loss approximation: -59 dBm @ 1m, N=2.6
+                        const estMeters = Math.pow(10, (-59 - unit.rssi) / 26);
+                        accRadius = Math.min(Math.max(estMeters, 4), 32);
+                    }
 
                     let markerClass = "marker-online";
                     let markerBg = "var(--color-online)";
                     let statusLabelText = "ONLINE";
 
+                    const relaySource = unit.relay_by || unit.relayBy || "";
+
                     if (isCasualty) {
                         markerClass = "marker-casualty";
                         markerBg = "var(--color-distress)";
                         statusLabelText = "DISTRESS / CASUALTY";
+                    } else if (isLiveRelay) {
+                        markerClass = "marker-relay";
+                        markerBg = "var(--color-relay)";
+                        statusLabelText = `BLE RELAY (via ${relaySource || 'SCOUT'})`;
                     } else if (isGpsLost) {
                         markerClass = "marker-stale";
                         markerBg = "var(--color-gps-lost)";
@@ -792,7 +813,10 @@
                     const initials = safeCallsign.substring(0, 2).toUpperCase();
                     
                     const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerBg};">${initials}</div>`;
-                    const popupHtml = `<strong>${safeCallsign}</strong><br>Status: ${safeStatus}<br>Acc: ±${(unit.accuracy || 5).toFixed(1)}m`;
+                    
+                    const rssiInfo = (isRelayed && unit.rssi !== undefined) ? `<br>BLE Signal: ${unit.rssi} dBm (~${accRadius.toFixed(1)}m)` : '';
+                    const anchorInfo = (isRelayed && relaySource) ? `<br>Anchored to: ${sanitizeHtml(relaySource)}` : '';
+                    const popupHtml = `<strong>${safeCallsign}</strong><br>Status: ${safeStatus}<br>Acc: ±${accRadius.toFixed(1)}m${anchorInfo}${rssiInfo}`;
 
                     if (!markers[key]) {
                         markers[key] = L.marker(latLng, { 
@@ -809,18 +833,19 @@
                         markers[key].getPopup().setContent(popupHtml);
                     }
 
-                    // Accuracy Circle: Only visible when commando is live
-                    if (isLive) {
-                        const circleColor = isCasualty ? '#dc2626' : '#15803d';
-                        const circleOpacity = 0.12;
+                    // Accuracy / Search Radius Circle
+                    if (isLiveGps || isLiveRelay) {
+                        const circleColor = isCasualty ? '#dc2626' : (isLiveRelay ? '#f59e0b' : '#15803d');
+                        const circleOpacity = isLiveRelay ? 0.18 : 0.12;
 
                         if (!accuracyCircles[key]) {
                             accuracyCircles[key] = L.circle(latLng, {
                                 radius: accRadius,
                                 color: circleColor,
-                                weight: 1,
+                                weight: isLiveRelay ? 1.5 : 1,
                                 fillOpacity: circleOpacity,
-                                fillColor: circleColor
+                                fillColor: circleColor,
+                                dashArray: isLiveRelay ? '4, 4' : null
                             }).addTo(map);
                         } else {
                             accuracyCircles[key].setLatLng(latLng);
@@ -828,7 +853,8 @@
                             accuracyCircles[key].setStyle({
                                 color: circleColor,
                                 fillColor: circleColor,
-                                fillOpacity: circleOpacity
+                                fillOpacity: circleOpacity,
+                                dashArray: isLiveRelay ? '4, 4' : null
                             });
                         }
                     } else {
@@ -838,11 +864,38 @@
                         }
                     }
 
-                    // Traveled paths
+                    // BLE Dynamic Tether Line (connect indoor commando to outdoor relaying partner)
+                    if (isLiveRelay && relaySource && (data[relaySource] || lastPositions[relaySource])) {
+                        const parentUnit = data[relaySource];
+                        const parentLatLng = (parentUnit && parentUnit.lat && parentUnit.lng) 
+                            ? [parentUnit.lat, parentUnit.lng] 
+                            : lastPositions[relaySource];
+
+                        if (parentLatLng) {
+                            if (!tethers[key]) {
+                                tethers[key] = L.polyline([parentLatLng, latLng], {
+                                    color: '#f59e0b',
+                                    weight: 2.5,
+                                    dashArray: '6, 8',
+                                    opacity: 0.85
+                                }).addTo(map);
+                            } else {
+                                tethers[key].setLatLngs([parentLatLng, latLng]);
+                                if (!map.hasLayer(tethers[key])) tethers[key].addTo(map);
+                            }
+                        }
+                    } else {
+                        if (tethers[key]) {
+                            map.removeLayer(tethers[key]);
+                            delete tethers[key];
+                        }
+                    }
+
+                    // Traveled path segments
                     if (!unitSegments[key]) unitSegments[key] = [];
 
                     if (lastPositions[key]) {
-                        if (isLive || isCasualty) {
+                        if (isLiveGps || isCasualty) {
                             const prevLatLng = lastPositions[key];
                             const distanceMoved = map.distance(prevLatLng, latLng);
                             const minMoveThreshold = Math.max(2.5, accRadius * 0.4);
@@ -887,6 +940,10 @@
                     cardClass = "card-casualty";
                     statusBadgeText = "🚨 CASUALTY";
                     statusBadgeColor = "var(--color-distress)";
+                } else if (isLiveRelay) {
+                    cardClass = "card-relay";
+                    statusBadgeText = "📡 BLE RELAY";
+                    statusBadgeColor = "var(--color-relay)";
                 } else if (isGpsLost) {
                     cardClass = "card-stale";
                     statusBadgeText = `⚠ GPS LOST · ${ageText}`;
@@ -898,13 +955,14 @@
                 }
 
                 card.className = `unit-card ${cardClass}`;
-                
-                // Click-to-Center Focus with flyTo, popup reveal, and radar ping
                 card.onclick = () => focusCommando(key);
 
                 const headingDeg = Math.round(unit.heading || 0);
                 const safeName = sanitizeHtml(unit.callsign || key);
                 const safeGroup = sanitizeHtml(unit.group || 'N/A');
+                const relayDetails = isLiveRelay 
+                    ? `<div style="font-size:0.68rem; color:#fde68a; margin-top:2px;">↳ RELAY VIA: ${sanitizeHtml(unit.relay_by || unit.relayBy || 'SCOUT')} | RSSI: ${unit.rssi ? unit.rssi + ' dBm' : 'N/A'}</div>` 
+                    : '';
 
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -916,6 +974,7 @@
                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
                         ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${safeGroup}
                     </div>
+                    ${relayDetails}
                     ${unit.audioActive ? `
                         <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
                                 onclick="event.stopPropagation(); toggleAudioListen('${key}')">
@@ -933,6 +992,7 @@
             });
 
             document.getElementById("onlineCount").innerText = onlineCount;
+            document.getElementById("relayCount").innerText = relayCount;
             document.getElementById("casualtyCount").innerText = casualtyCount;
             document.getElementById("staleCount").innerText = staleCount;
             document.getElementById("totalUnitsBadge").innerText = `${visibleCount} UNITS`;
@@ -950,18 +1010,15 @@
             const targetPos = [unit.lat, unit.lng];
             const targetZoom = 18;
 
-            // Smooth pan and zoom animation to the operator's pin
             map.flyTo(targetPos, targetZoom, {
                 animate: true,
                 duration: 1.2,
                 easeLinearity: 0.25
             });
 
-            // Reveal tactical popup
             if (markers[unitKey]) {
                 markers[unitKey].openPopup();
                 
-                // Trigger visual radar ping on the marker DOM element
                 const markerEl = markers[unitKey].getElement();
                 if (markerEl) {
                     const innerMarker = markerEl.querySelector('.commando-marker');
@@ -973,7 +1030,6 @@
                 }
             }
 
-            // Auto-collapse sidebar on mobile screens so map remains unobstructed
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById("sidebarPanel");
                 const btn = document.getElementById("toggleRosterBtn");
