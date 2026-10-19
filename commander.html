@@ -185,6 +185,7 @@
         .btn-tool.btn-ied.active { background: #d97706; color: #000; font-weight: bold; }
         .btn-breach { border-color: #16a34a; color: #86efac; }
         .btn-breach.active { background: #16a34a; color: #fff; font-weight: bold; }
+        .btn-purge { border-color: #f59e0b; color: #fef08a; }
         .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
 
         /* Tactical Markers */
@@ -309,6 +310,7 @@
             <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
             <button id="btnBreach" class="btn-tool btn-breach" onclick="setQuickMarker('BREACH')">🟢 +BREACH</button>
             <button id="measureBtn" class="btn-tool" onclick="toggleMeasureTool()">📏 MEASURE</button>
+            <button id="purgeBtn" class="btn-tool btn-purge" onclick="purgeDatabaseGhosts()">🧹 PURGE GHOSTS</button>
             <button id="sirenMuteBtn" class="btn-tool" onclick="toggleSirenMute()">🔔 SIREN: ON</button>
             <button class="btn-tool" onclick="clearSitRepMarkers()">🧹 CLEAR SITREPS</button>
             <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOGOUT</button>
@@ -411,7 +413,8 @@
         let hideOffline = false; 
         const knownUnits = {};       
         const STOP_STATUSES = ["STOPPED", "ENDED"]; 
-        const STALE_MS = 30000;      
+        const STALE_MS = 30000;          // 30 seconds -> GPS Lost status
+        const GHOST_PURGE_MS = 120000;   // 120 seconds -> Automatic Firebase & Dashboard purge
 
         // WebRTC & Audio Settings
         const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
@@ -450,6 +453,27 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        // Canonical Key Normalization for strict tactical deduplication
+        function getCanonicalKey(str) {
+            if (!str) return '';
+            return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        // Check if two tactical IDs are duplicate representations of the same commando
+        function areDuplicateCallsigns(idA, idB) {
+            const normA = getCanonicalKey(idA);
+            const normB = getCanonicalKey(idB);
+            if (!normA || !normB) return false;
+            if (normA === normB) return true;
+            // Check if one was sliced by BLE limit (e.g., 'chhit3' vs 'chhit3cdo1')
+            if (normA.length >= 4 && normB.length >= 4) {
+                if (normA.startsWith(normB) || normB.startsWith(normA)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // --- 4. MAP ROTATION & NORTH ARROW ENGINE ---
@@ -600,7 +624,7 @@
             });
         }
 
-        // --- 7. TELEMETRY & SORTED ROSTER ENGINE ---
+        // --- 7. TELEMETRY, AUTO-DEDUPLICATION & FIREBASE AUTO-PURGE ---
         function startListeningTelemetry() {
             if (isListening) return;
             isListening = true;
@@ -610,6 +634,7 @@
                 const incomingData = snapshot.val() || {};
                 const now = Date.now();
 
+                // 1. Process incoming snapshot
                 Object.keys(incomingData).forEach((k) => {
                     const u = incomingData[k];
                     if (!u) return;
@@ -618,11 +643,24 @@
                     const isRelayed = (u.status === "RELAYED_INDOOR" || !!u.relay_by || !!u.relayBy);
                     const isLive = ((u.status === "ONLINE" || isRelayed) && ageMs <= STALE_MS);
 
-                    if (isInitialLoginLoad && !isLive) {
+                    // Skip dead entries on fresh dashboard login
+                    if (isInitialLoginLoad && !isLive && !u.casualty) {
+                        // Purge old dead entries from Firebase immediately
+                        if (ageMs > GHOST_PURGE_MS) {
+                            database.ref("commandos/" + k).remove().catch(() => {});
+                        }
                         return;
                     }
 
                     knownUnits[k] = u;
+                });
+
+                // 2. Remove locally deleted keys that are no longer in Firebase
+                Object.keys(knownUnits).forEach(k => {
+                    if (!incomingData[k]) {
+                        delete knownUnits[k];
+                        removeUnitFromMap(k);
+                    }
                 });
 
                 renderTelemetry();
@@ -632,7 +670,7 @@
             });
 
             if (staleTimer) clearInterval(staleTimer);
-            staleTimer = setInterval(renderTelemetry, 3500);
+            staleTimer = setInterval(renderTelemetry, 3000);
         }
 
         function removeUnitFromMap(k) {
@@ -656,39 +694,92 @@
             const now = Date.now();
             const unitListEl = document.getElementById("unitList");
 
-            // Deduplication by callsign
-            const bestKeyById = {};
+            // --- ADVANCED DEDUPLICATION & AUTO-PURGING ENGINE ---
+            const allKeys = Object.keys(data);
+            const obsoleteKeysToDelete = new Set();
+
+            for (let i = 0; i < allKeys.length; i++) {
+                const keyA = allKeys[i];
+                if (obsoleteKeysToDelete.has(keyA)) continue;
+                const unitA = data[keyA];
+                if (!unitA) continue;
+
+                // Auto-purge abandoned ghost sessions from Firebase & dashboard (> 2 mins old, not casualty)
+                const ageA = now - (unitA.lastUpdated || 0);
+                if (!unitA.casualty && ageA > GHOST_PURGE_MS) {
+                    obsoleteKeysToDelete.add(keyA);
+                    database.ref("commandos/" + keyA).remove().catch(() => {});
+                    continue;
+                }
+
+                // Check for duplicates among other keys
+                for (let j = i + 1; j < allKeys.length; j++) {
+                    const keyB = allKeys[j];
+                    if (obsoleteKeysToDelete.has(keyB)) continue;
+                    const unitB = data[keyB];
+                    if (!unitB) continue;
+
+                    const idA = unitA.callsign || keyA;
+                    const idB = unitB.callsign || keyB;
+
+                    if (areDuplicateCallsigns(idA, idB)) {
+                        // Conflict detected! Compare which one to keep
+                        const timeA = unitA.lastUpdated || 0;
+                        const timeB = unitB.lastUpdated || 0;
+                        const lenA = String(idA).length;
+                        const lenB = String(idB).length;
+
+                        let winnerKey, loserKey;
+
+                        // Prefer the entry updated within the last 15s; if close, prefer longer/fuller callsign
+                        if (Math.abs(timeA - timeB) > 15000) {
+                            winnerKey = timeA > timeB ? keyA : keyB;
+                            loserKey = timeA > timeB ? keyB : keyA;
+                        } else {
+                            // Close in time: prefer the full name (e.g. 'CH-HIT3-CDO-1' over sliced 'CH-HIT3')
+                            winnerKey = lenA >= lenB ? keyA : keyB;
+                            loserKey = lenA >= lenB ? keyB : keyA;
+                        }
+
+                        // If the loser has newer telemetry (e.g., fresh BLE relay coordinate), merge into winner
+                        const winnerUnit = data[winnerKey];
+                        const loserUnit = data[loserKey];
+                        if (loserUnit && (loserUnit.lastUpdated || 0) > (winnerUnit.lastUpdated || 0)) {
+                            winnerUnit.lat = loserUnit.lat;
+                            winnerUnit.lng = loserUnit.lng;
+                            winnerUnit.accuracy = loserUnit.accuracy;
+                            winnerUnit.rssi = loserUnit.rssi;
+                            winnerUnit.relay_by = loserUnit.relay_by || loserUnit.relayBy;
+                            winnerUnit.status = loserUnit.status;
+                            winnerUnit.lastUpdated = loserUnit.lastUpdated;
+                        }
+
+                        // Mark loser for permanent deletion from dashboard & Firebase
+                        obsoleteKeysToDelete.add(loserKey);
+                        database.ref("commandos/" + loserKey).remove().catch(() => {});
+                    }
+                }
+            }
+
+            // Remove obsolete/duplicate records from memory & map
+            obsoleteKeysToDelete.forEach(k => {
+                delete data[k];
+                removeUnitFromMap(k);
+            });
+
+            // Clean stopped or ended sessions
             Object.keys(data).forEach((key) => {
-                const u = data[key];
-                if (!u) return;
-                const normalizedId = String(u.callsign || key).trim().toLowerCase();
-                const existingKey = bestKeyById[normalizedId];
-                if (!existingKey || (u.lastUpdated || 0) > ((data[existingKey] && data[existingKey].lastUpdated) || 0)) {
-                    bestKeyById[normalizedId] = key;
-                }
-            });
-
-            const uniqueActiveKeys = new Set(Object.values(bestKeyById));
-
-            Object.keys(data).forEach(k => {
-                if (!uniqueActiveKeys.has(k)) {
-                    delete data[k];
-                    removeUnitFromMap(k);
-                }
-            });
-
-            uniqueActiveKeys.forEach((key) => {
                 const unit = data[key];
                 if (unit && (STOP_STATUSES.includes(unit.status) || unit.sessionEnded === true)) {
                     delete knownUnits[key];
                     removeUnitFromMap(key);
-                    uniqueActiveKeys.delete(key);
+                    database.ref("commandos/" + key).remove().catch(() => {});
                 }
             });
 
-            const sortedKeys = Array.from(uniqueActiveKeys);
-
-            sortedKeys.sort((a, b) => {
+            // Step 2: Sort active commandos
+            const activeKeys = Object.keys(data);
+            activeKeys.sort((a, b) => {
                 const uA = data[a];
                 const uB = data[b];
                 const ageA = now - (uA.lastUpdated || 0);
@@ -724,7 +815,7 @@
             let staleCount = 0;
             let visibleCount = 0;
 
-            sortedKeys.forEach((key) => {
+            activeKeys.forEach((key) => {
                 const unit = data[key];
                 const isCasualty = !!unit.casualty;
                 const isRelayed = (unit.status === "RELAYED_INDOOR" || !!unit.relay_by || !!unit.relayBy);
@@ -776,10 +867,8 @@
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
                     
-                    // Approximate proximity search radius from RSSI if relayed, otherwise GPS accuracy
                     let accRadius = Math.min(Math.max(unit.accuracy || 5, 2), 35);
                     if (isRelayed && unit.rssi) {
-                        // Log-distance path loss approximation: -59 dBm @ 1m, N=2.6
                         const estMeters = Math.pow(10, (-59 - unit.rssi) / 26);
                         accRadius = Math.min(Math.max(estMeters, 4), 32);
                     }
@@ -864,7 +953,7 @@
                         }
                     }
 
-                    // BLE Dynamic Tether Line (connect indoor commando to outdoor relaying partner)
+                    // BLE Dynamic Tether Line
                     if (isLiveRelay && relaySource && (data[relaySource] || lastPositions[relaySource])) {
                         const parentUnit = data[relaySource];
                         const parentLatLng = (parentUnit && parentUnit.lat && parentUnit.lng) 
@@ -986,7 +1075,7 @@
 
             Array.from(unitListEl.children).forEach(child => {
                 const cardKey = child.getAttribute("data-key");
-                if (cardKey && !uniqueActiveKeys.has(cardKey)) {
+                if (cardKey && !data[cardKey]) {
                     unitListEl.removeChild(child);
                 }
             });
@@ -999,7 +1088,40 @@
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
-        // --- 8. TACTICAL FOCUS CONTROLS ---
+        // --- 8. MANUAL PURGE DATABASE GHOSTS ---
+        async function purgeDatabaseGhosts() {
+            if (!confirm("PURGE GHOST ENTRIES?\n\nThis will remove any offline or duplicate commando keys from Firebase Realtime Database that have been inactive for more than 45 seconds.\n\nActive live units will not be affected.")) {
+                return;
+            }
+
+            const now = Date.now();
+            let purgedCount = 0;
+
+            try {
+                const snap = await database.ref("commandos").get();
+                const allData = snap.val() || {};
+
+                for (const key of Object.keys(allData)) {
+                    const u = allData[key];
+                    const ageMs = now - (u.lastUpdated || 0);
+
+                    // Purge if inactive for > 45s (and not an active casualty)
+                    if (!u.casualty && (ageMs > 45000 || STOP_STATUSES.includes(u.status))) {
+                        await database.ref("commandos/" + key).remove();
+                        delete knownUnits[key];
+                        removeUnitFromMap(key);
+                        purgedCount++;
+                    }
+                }
+
+                alert("DATABASE PURGE COMPLETE\nRemoved " + purgedCount + " stale or duplicate entries from Firebase.");
+                renderTelemetry();
+            } catch (err) {
+                alert("Purge failed: " + err.message);
+            }
+        }
+
+        // --- 9. TACTICAL FOCUS CONTROLS ---
         function focusCommando(unitKey) {
             const unit = knownUnits[unitKey];
             if (!unit || typeof unit.lat !== 'number' || typeof unit.lng !== 'number') {
@@ -1024,7 +1146,7 @@
                     const innerMarker = markerEl.querySelector('.commando-marker');
                     if (innerMarker) {
                         innerMarker.classList.remove('marker-focused');
-                        void innerMarker.offsetWidth; // Force reflow
+                        void innerMarker.offsetWidth;
                         innerMarker.classList.add('marker-focused');
                     }
                 }
@@ -1054,7 +1176,7 @@
             }
         }
 
-        // --- 9. TACTICAL DISTRESS SIREN ---
+        // --- 10. TACTICAL DISTRESS SIREN ---
         function playDistressSiren() {
             if (isSirenMuted || isSirenPlaying) return;
             try {
@@ -1113,7 +1235,7 @@
             }
         }
 
-        // --- 10. AUDIO INTERCEPT (WebRTC) ---
+        // --- 11. AUDIO INTERCEPT (WebRTC) ---
         async function toggleAudioListen(unitKey) {
             const player = document.getElementById("remoteAudioPlayer");
 
@@ -1236,7 +1358,7 @@
             }
         }
 
-        // --- 11. SITREP MARKERS ---
+        // --- 12. SITREP MARKERS ---
         function setQuickMarker(type) {
             if (activePlacementType === type) {
                 resetPlacementState();
@@ -1291,7 +1413,7 @@
             situationMarkers.length = 0;
         }
 
-        // --- 12. MEASUREMENT & MAP CLICKS ---
+        // --- 13. MEASUREMENT & MAP CLICKS ---
         let measureActive = false;
         let measurePoints = [];
         let measureLine = null;
