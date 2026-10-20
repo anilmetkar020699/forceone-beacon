@@ -269,8 +269,8 @@
             transform: scale(1.15);
         }
 
-        /* Hit Merge Tactical Modal */
-        #hitMergeModal {
+        /* Hit Merge & Comms Tactical Modal Dialogs */
+        #hitMergeModal, #commsModal {
             display: none; position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); 
             z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(5px);
         }
@@ -389,6 +389,7 @@
         <div class="toolbar-actions">
             <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
             <button id="btnHitMerge" class="btn-tool btn-merge" onclick="openHitMergeModal()">🔀 MERGE HITS</button>
+            <button id="btnComms" class="btn-tool" onclick="openCommsModal()" style="background:#0369a1; color:#fff; border-color:#38bdf8;">✉️ SEND MESSAGE</button>
             <button id="toggleOfflineBtn" class="btn-tool" onclick="toggleOfflineFilter()">🟢 ONLINE ONLY: OFF</button>
             <button id="btnHostile" class="btn-tool btn-threat" onclick="setQuickMarker('HOSTILE')">🔴 +HOSTILE</button>
             <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
@@ -447,6 +448,74 @@
                 </div>
                 <div id="activeMergedItemsContainer">
                     <div style="color:#64748b; font-size:0.7rem;">No squads currently merged.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tactical Order & Message Dispatch Modal -->
+    <div id="commsModal">
+        <div class="merge-dialog" style="width:480px; max-width:94vw; border-color:#38bdf8; box-shadow:0 0 25px rgba(56,189,248,0.25);">
+            <h3>
+                <span>✉️ SEND MESSAGE TO FIELD</span>
+                <span onclick="closeCommsModal()" style="cursor:pointer; color:#94a3b8; font-size:1.1rem;">✕</span>
+            </h3>
+
+            <!-- 1. Target Scope -->
+            <label for="commsScopeSelect">1. TARGET RECIPIENT</label>
+            <select id="commsScopeSelect" onchange="onCommsScopeChange()">
+                <option value="ALL">📢 BROADCAST TO ALL UNITS</option>
+                <option value="GROUP">👥 SPECIFIC GROUP (Alfa, Bravo, etc.)</option>
+                <option value="HIT">🎯 SPECIFIC HIT (Hit Squad)</option>
+                <option value="COMMANDO">👤 INDIVIDUAL COMMANDO</option>
+            </select>
+
+            <div id="commsGroupRow" style="display:none;">
+                <label for="commsGroupSelect">SELECT GROUP</label>
+                <select id="commsGroupSelect" onchange="onCommsGroupChange()">
+                    <option value="Alfa">Alfa</option>
+                    <option value="Bravo">Bravo</option>
+                    <option value="Charlie" selected>Charlie</option>
+                    <option value="Delta">Delta</option>
+                    <option value="SOT">SOT (Special Operations Team)</option>
+                    <option value="Sniper">Sniper</option>
+                    <option value="BD">BD (Bomb Disposal)</option>
+                </select>
+            </div>
+
+            <div id="commsHitRow" style="display:none;">
+                <label for="commsHitSelect">SELECT HIT ASSIGNMENT</label>
+                <select id="commsHitSelect" onchange="onCommsHitChange()">
+                    <!-- Populated dynamically based on Group -->
+                </select>
+            </div>
+
+            <div id="commsCommandoRow" style="display:none;">
+                <label for="commsCommandoSelect">SELECT COMMANDO POSITION</label>
+                <select id="commsCommandoSelect">
+                    <!-- Populated dynamically with zero duplicates -->
+                </select>
+            </div>
+
+            <!-- 2. Quick Command Presets -->
+            <label>2. QUICK MESSAGE PRESETS</label>
+            <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; margin-bottom:8px;">
+                <button type="button" class="btn-tool" onclick="setPresetOrder('HOLD POSITION & MAINTAIN COVER')" style="color:#38bdf8; border-color:#334155;">🛑 HOLD POSITION</button>
+                <button type="button" class="btn-tool btn-breach" onclick="setPresetOrder('COMMENCE BREACH ON SIGNAL')">🟢 COMMENCE BREACH</button>
+                <button type="button" class="btn-tool btn-ied" onclick="setPresetOrder('FALL BACK TO PERIMETER')">⚠️ FALL BACK</button>
+                <button type="button" class="btn-tool btn-threat" onclick="setPresetOrder('CEASE FIRE - HOSTAGE SECURED')">🔴 CEASE FIRE</button>
+                <button type="button" class="btn-tool" onclick="setPresetOrder('REPORT SITREP / AMMO / STATUS')" style="color:#c084fc; border-color:#334155;">📊 REPORT SITREP</button>
+            </div>
+
+            <!-- 3. Directive Text -->
+            <label for="commsMessageInput">3. MESSAGE TEXT</label>
+            <textarea id="commsMessageInput" rows="3" placeholder="Type custom operational message..." style="width:100%; background:#0f172a; color:#fff; border:1px solid #334155; border-radius:6px; padding:10px; font-size:0.85rem; font-family:monospace; margin-bottom:10px; outline:none; resize:none;"></textarea>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <span id="commsDispatchStatus" style="font-size:0.75rem; color:#4ade80; font-weight:bold;"></span>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" onclick="closeCommsModal()" style="background:#334155; color:#fff; border:none; padding:9px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.8rem;">CANCEL</button>
+                    <button type="button" onclick="dispatchTacticalOrder()" style="background:#0284c7; color:#fff; border:1px solid #38bdf8; font-weight:bold; padding:9px 16px; border-radius:6px; cursor:pointer; font-size:0.8rem; letter-spacing:1px;">SEND NOW 📤</button>
                 </div>
             </div>
         </div>
@@ -645,7 +714,6 @@
                 }
             }
 
-            // Extract Commando Number (e.g. CDO-1 or Commando 2)
             let cdoNum = "";
             const mCdo = callsign.match(/(?:CDO|COMMANDO)[- ]?(\d+)/i);
             if (mCdo) cdoNum = `CDO-${mCdo[1]}`;
@@ -743,7 +811,6 @@
             const hit = document.getElementById("modalHitSelect").value;
             const isMerged = mergedHits.has(canonicalKey);
 
-            // Find all matching active commandos
             const matchingCommandos = [];
             Object.keys(knownUnits).forEach(k => {
                 const u = knownUnits[k];
@@ -799,7 +866,6 @@
         function unmergeHit(canonicalKey) {
             mergedHits.delete(canonicalKey);
 
-            // Remove Squad marker and perimeter circle from map
             if (squadMarkers[canonicalKey]) {
                 map.removeLayer(squadMarkers[canonicalKey]);
                 delete squadMarkers[canonicalKey];
@@ -847,7 +913,148 @@
             });
         }
 
-        // --- 6. TOGGLE ROSTER & FILTER CONTROLS ---
+        // --- 6. TACTICAL ORDER & MESSAGE DISPATCH CONTROLS ---
+        function openCommsModal() {
+            document.getElementById("commsModal").style.display = "flex";
+            onCommsScopeChange();
+        }
+
+        function closeCommsModal() {
+            document.getElementById("commsModal").style.display = "none";
+            const statusEl = document.getElementById("commsDispatchStatus");
+            if (statusEl) statusEl.innerText = "";
+        }
+
+        function onCommsScopeChange() {
+            const scope = document.getElementById("commsScopeSelect").value;
+            document.getElementById("commsGroupRow").style.display = (scope === "ALL") ? "none" : "block";
+            document.getElementById("commsHitRow").style.display = (scope === "HIT" || scope === "COMMANDO") ? "block" : "none";
+            document.getElementById("commsCommandoRow").style.display = (scope === "COMMANDO") ? "block" : "none";
+
+            if (scope !== "ALL") {
+                onCommsGroupChange();
+            }
+        }
+
+        function onCommsGroupChange() {
+            const group = document.getElementById("commsGroupSelect").value;
+            const hitSelect = document.getElementById("commsHitSelect");
+            hitSelect.innerHTML = "";
+
+            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(group)) {
+                for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+            } else if (group === "SOT") {
+                for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+            } else if (group === "Sniper") {
+                ["India 1", "India 2", "India 3", "India 4"].forEach(s => hitSelect.add(new Option(s, s)));
+            } else if (group === "BD") {
+                ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
+            }
+
+            onCommsHitChange();
+        }
+
+        function onCommsHitChange() {
+            if (document.getElementById("commsScopeSelect").value === "COMMANDO") {
+                populateCommandoDropdown();
+            }
+        }
+
+        // Populates target commandos with strict zero duplicate guarantee
+        function populateCommandoDropdown() {
+            const commandoSelect = document.getElementById("commsCommandoSelect");
+            commandoSelect.innerHTML = "";
+
+            const group = document.getElementById("commsGroupSelect").value;
+            const hit = document.getElementById("commsHitSelect").value;
+            const cleanGroup = (group || "").toUpperCase();
+            const cleanHit = (hit || "").toUpperCase().replace(/\s+/g, "");
+
+            const seenCallsigns = new Set();
+
+            // 1. Detect active commandos on the grid matching group & hit
+            Object.keys(knownUnits).forEach(k => {
+                const u = knownUnits[k];
+                const info = getUnitGroupAndHit(u, k);
+                if (info.canonicalHitKey === `${cleanGroup}::${cleanHit}`) {
+                    const rawCallsign = (u.callsign || k).trim();
+                    let stdCallsign = rawCallsign.toUpperCase().replace(/\s*-\s*/g, '-').replace(/COMMANDO/g, 'CDO');
+                    if (!seenCallsigns.has(stdCallsign)) {
+                        seenCallsigns.add(stdCallsign);
+                        const opt = document.createElement("option");
+                        opt.value = stdCallsign;
+                        opt.innerText = `● ACTIVE: ${u.callsign || k} (${stdCallsign})`;
+                        commandoSelect.appendChild(opt);
+                    }
+                }
+            });
+
+            // 2. Add standard positions (1 to 6 for standard hits, or 1 to 4 for Sniper/BD/SOT)
+            const hitPrefix = cleanHit;
+            const maxPositions = (group === "Sniper" || group === "BD") ? 4 : 6;
+            for (let i = 1; i <= maxPositions; i++) {
+                const stdCallsign = `${cleanGroup}-${hitPrefix}-CDO-${i}`;
+                if (!seenCallsigns.has(stdCallsign)) {
+                    seenCallsigns.add(stdCallsign);
+                    const opt = document.createElement("option");
+                    opt.value = stdCallsign;
+                    opt.innerText = `${group} - ${hit} - Position ${i} (${stdCallsign})`;
+                    commandoSelect.appendChild(opt);
+                }
+            }
+        }
+
+        function setPresetOrder(text) {
+            document.getElementById("commsMessageInput").value = text;
+        }
+
+        // Overwrites the single /active_order slot directly (0 KB database accumulation)
+        function dispatchTacticalOrder() {
+            const text = document.getElementById("commsMessageInput").value.trim();
+            if (!text) {
+                alert("Please enter message text or select a preset.");
+                return;
+            }
+
+            const scope = document.getElementById("commsScopeSelect").value;
+            const group = document.getElementById("commsGroupSelect").value;
+            const hit = document.getElementById("commsHitSelect").value;
+            const targetCallsign = document.getElementById("commsCommandoSelect").value;
+
+            const payload = {
+                orderId: "MSG_" + Date.now(),
+                scope: scope, // "ALL", "GROUP", "HIT", or "COMMANDO"
+                group: (scope !== "ALL") ? group : "ALL",
+                hit: (scope === "HIT" || scope === "COMMANDO") ? hit : "ALL",
+                targetCallsign: (scope === "COMMANDO") ? targetCallsign : "ALL",
+                message: text,
+                sender: "HQ COMMAND",
+                timestamp: Date.now()
+            };
+
+            const statusEl = document.getElementById("commsDispatchStatus");
+            statusEl.innerText = "TRANSMITTING...";
+            statusEl.style.color = "#38bdf8";
+
+            // Overwrites /active_order directly (no .push(), 0 KB storage accumulation, supports sequential messaging)
+            database.ref("active_order").set(payload, (err) => {
+                if (err) {
+                    statusEl.innerText = "SEND FAILED";
+                    statusEl.style.color = "#ef4444";
+                    alert("Message delivery failed: " + err.message);
+                } else {
+                    statusEl.innerText = "✓ MESSAGE SENT";
+                    statusEl.style.color = "#4ade80";
+                    setTimeout(() => {
+                        closeCommsModal();
+                        document.getElementById("commsMessageInput").value = "";
+                        statusEl.innerText = "";
+                    }, 1000);
+                }
+            });
+        }
+
+        // --- 7. TOGGLE ROSTER & FILTER CONTROLS ---
         function toggleSidebar() {
             const sidebar = document.getElementById("sidebarPanel");
             const btn = document.getElementById("toggleRosterBtn");
@@ -876,7 +1083,7 @@
             renderTelemetry();
         }
 
-        // --- 7. AUTHENTICATION & SESSION MANAGEMENT ---
+        // --- 8. AUTHENTICATION & SESSION MANAGEMENT ---
         firebase.auth().onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById("authOverlay").style.display = "none";
@@ -958,7 +1165,7 @@
             });
         }
 
-        // --- 8. TELEMETRY LISTENER & MAP ENGINE ---
+        // --- 9. TELEMETRY LISTENER & MAP ENGINE ---
         function startListeningTelemetry() {
             if (isListening) return;
             isListening = true;
@@ -1100,8 +1307,8 @@
             });
 
             // --- PARTITION INTO MERGED SQUADS VS INDEPENDENT COMMANDOS ---
-            const squadGroups = {};       // canonicalKey -> Array of { key, unit, info }
-            const independentKeys = [];   // Keys rendered as individual markers
+            const squadGroups = {};       
+            const independentKeys = [];   
 
             Object.keys(data).forEach(key => {
                 const unit = data[key];
@@ -1113,12 +1320,10 @@
                     }
                     squadGroups[info.canonicalHitKey].push({ key, unit, info });
                     
-                    // Remove individual marker from map if previously drawn
                     if (markers[key]) { map.removeLayer(markers[key]); delete markers[key]; }
                     if (accuracyCircles[key]) { map.removeLayer(accuracyCircles[key]); delete accuracyCircles[key]; }
                     if (tethers[key]) { map.removeLayer(tethers[key]); delete tethers[key]; }
                     
-                    // Remove individual card from roster
                     const indCard = document.getElementById(`unit_card_${key}`);
                     if (indCard && indCard.parentNode) indCard.parentNode.removeChild(indCard);
                 } else {
@@ -1126,7 +1331,6 @@
                 }
             });
 
-            // Remove any old squad markers for hits that are no longer merged
             Object.keys(squadMarkers).forEach(canonicalKey => {
                 if (!mergedHits.has(canonicalKey)) {
                     map.removeLayer(squadMarkers[canonicalKey]);
@@ -1193,12 +1397,10 @@
                 else if (hasLiveRelay) relayCount++;
                 else if (hasGpsLost) staleCount++;
 
-                // Compute Centroid (Average Location)
                 const avgLat = validCoordCount > 0 ? (sumLat / validCoordCount) : null;
                 const avgLng = validCoordCount > 0 ? (sumLng / validCoordCount) : null;
 
-                // Compute Formation Spread Radius
-                let maxSpread = 12; // Base squad footprint in meters
+                let maxSpread = 12;
                 if (avgLat && avgLng) {
                     members.forEach(m => {
                         const u = m.unit;
@@ -1245,7 +1447,6 @@
                     squadMarkerClass = "marker-offline";
                 }
 
-                // Render Squad Centroid Marker on Map
                 if (avgLat && avgLng) {
                     const squadLatLng = [avgLat, avgLng];
                     const squadHtml = `
@@ -1278,7 +1479,6 @@
                         squadMarkers[canonicalKey].getPopup().setContent(popupHtml);
                     }
 
-                    // Spread Footprint Circle
                     const circleColor = hasCasualty ? '#dc2626' : (hasLiveRelay ? '#f59e0b' : '#38bdf8');
                     if (!squadCircles[canonicalKey]) {
                         squadCircles[canonicalKey] = L.circle(squadLatLng, {
@@ -1299,7 +1499,6 @@
                     }
                 }
 
-                // Render Unified Squad Card in Sidebar Roster
                 let sqCard = document.getElementById(`squad_card_${canonicalKey}`);
                 if (!sqCard) {
                     sqCard = document.createElement("div");
@@ -1630,7 +1829,6 @@
                 `;
             });
 
-            // Cleanup cards of units no longer present
             Array.from(unitListEl.children).forEach(child => {
                 const cardKey = child.getAttribute("data-key");
                 if (cardKey && !data[cardKey] && !squadGroups[cardKey]) {
@@ -1646,7 +1844,7 @@
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
-        // --- 9. MANUAL PURGE DATABASE GHOSTS ---
+        // --- 10. MANUAL PURGE DATABASE GHOSTS ---
         async function purgeDatabaseGhosts() {
             const choice = confirm("PURGE GHOST ENTRIES?\n\nClick [OK] to clean stale / duplicate entries.\n(To reset and wipe ALL entries including old casualties, hold Shift or use browser console).");
             if (!choice) return;
@@ -1678,7 +1876,7 @@
             }
         }
 
-        // --- 10. TACTICAL FOCUS CONTROLS ---
+        // --- 11. TACTICAL FOCUS CONTROLS ---
         function focusCommando(unitKey) {
             const unit = knownUnits[unitKey];
             if (!unit || typeof unit.lat !== 'number' || typeof unit.lng !== 'number') {
@@ -1732,7 +1930,7 @@
             }
         }
 
-        // --- 11. TACTICAL DISTRESS SIREN ---
+        // --- 12. TACTICAL DISTRESS SIREN ---
         function playDistressSiren() {
             if (isSirenMuted || isSirenPlaying) return;
             try {
@@ -1791,7 +1989,7 @@
             }
         }
 
-        // --- 12. AUDIO INTERCEPT (WebRTC) ---
+        // --- 13. AUDIO INTERCEPT (WebRTC) ---
         async function toggleAudioListen(unitKey) {
             const player = document.getElementById("remoteAudioPlayer");
 
@@ -1914,7 +2112,7 @@
             }
         }
 
-        // --- 13. SITREP MARKERS ---
+        // --- 14. SITREP MARKERS ---
         function setQuickMarker(type) {
             if (activePlacementType === type) {
                 resetPlacementState();
@@ -1969,7 +2167,7 @@
             situationMarkers.length = 0;
         }
 
-        // --- 14. MEASUREMENT & MAP CLICKS ---
+        // --- 15. MEASUREMENT & MAP CLICKS ---
         let measureActive = false;
         let measurePoints = [];
         let measureLine = null;
