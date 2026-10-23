@@ -66,7 +66,6 @@
             cursor: pointer; color: #0a0e17; text-transform: uppercase; transition: 0.2s background;
         }
         .auth-card button:hover { background: #7dd3fc; }
-        .auth-card button:disabled { opacity: 0.6; cursor: not-allowed; }
 
         /* Header Operations Bar */
         header { 
@@ -137,13 +136,11 @@
             padding: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s;
         }
         .unit-card:hover { transform: translateX(-2px); }
-        
         .unit-card.card-online { border: 1px solid var(--color-online); border-left: 4px solid var(--color-online); background: #0f172a; }
         .unit-card.card-relay { border: 1px solid var(--color-relay); border-left: 4px solid var(--color-relay); background: rgba(245, 158, 11, 0.12); }
         .unit-card.card-casualty { border: 2px solid var(--color-distress); background: rgba(127, 29, 29, 0.35); }
         .unit-card.card-stale { border: 1px solid var(--color-gps-lost); background: rgba(30, 27, 75, 0.25); opacity: 0.85; }
         .unit-card.card-offline { border: 1px solid var(--color-offline); background: rgba(15, 23, 42, 0.35); opacity: 0.45; color: #64748b; }
-        .unit-card.card-squad { border-left: 5px solid #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.15); background: #0b1329 !important; }
 
         .btn-listen { width: 100%; margin-top: 8px; padding: 8px; font-size: 0.75rem; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; background: #dc2626; color: #fff; }
         .btn-listen.monitoring { background: var(--color-online); color: #fff; }
@@ -154,50 +151,17 @@
             white-space: nowrap; flex-shrink: 0;
         }
         .btn-tool.active { background: var(--accent-blue); color: #000; font-weight: bold; }
-        .btn-tool.btn-threat { border-color: #dc2626; color: #fca5a5; }
-        .btn-tool.btn-threat.active { background: #dc2626; color: #fff; font-weight: bold; }
-        .btn-tool.btn-ied { border-color: #d97706; color: #fde68a; }
-        .btn-tool.btn-ied.active { background: #d97706; color: #000; font-weight: bold; }
-        .btn-breach { border-color: #16a34a; color: #86efac; }
-        .btn-breach.active { background: #16a34a; color: #fff; font-weight: bold; }
-        .btn-merge { border-color: #38bdf8; color: #7dd3fc; font-weight: bold; }
-        .btn-merge.active { background: #0284c7; color: #fff; }
-        .btn-purge { border-color: #f59e0b; color: #fef08a; font-weight: bold; }
-        .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
+        .btn-tool.btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
 
         /* Tactical Markers */
         .commando-marker {
             width: 28px; height: 28px; border-radius: 50%; display: flex; 
             align-items: center; justify-content: center; font-size: 11px; 
             font-weight: 900; color: #fff; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.8);
-            transition: transform 0.2s ease-out;
-        }
-        .commando-marker.marker-online { background: var(--color-online) !important; border-color: #86efac; }
-        .commando-marker.marker-relay { background: var(--color-relay) !important; border-color: #fde68a; box-shadow: 0 0 14px rgba(245, 158, 11, 0.85); }
-        .commando-marker.marker-casualty { background: var(--color-distress) !important; border-color: #ffffff; }
-        .commando-marker.marker-stale { background: var(--color-gps-lost) !important; border-color: #fef08a; opacity: 0.8; }
-        .commando-marker.marker-offline { background: var(--color-offline) !important; border-color: #64748b; opacity: 0.35; }
-
-        .squad-marker {
-            width: 38px; height: 38px; border-radius: 8px; display: flex; 
-            flex-direction: column; align-items: center; justify-content: center; 
-            font-size: 9px; font-weight: 900; color: #fff; border: 2px solid #38bdf8; 
-            box-shadow: 0 0 16px rgba(56, 189, 248, 0.6); transition: transform 0.2s ease-out;
-            background: #0f172a; user-select: none;
-        }
-
-        @keyframes targetPing {
-            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.95), 0 0 10px rgba(0,0,0,0.8); }
-            70% { box-shadow: 0 0 0 28px rgba(56, 189, 248, 0), 0 0 15px rgba(56, 189, 248, 0.3); }
-            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0), 0 0 10px rgba(0,0,0,0.8); }
-        }
-
-        .commando-marker.marker-focused, .squad-marker.marker-focused {
-            animation: targetPing 1.2s ease-out 2; border-color: #38bdf8 !important; transform: scale(1.15);
         }
 
         /* Modals */
-        #hitMergeModal, #commsModal {
+        #commsModal {
             display: none; position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); 
             z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(5px);
         }
@@ -218,33 +182,13 @@
             width: 100%; background: #0f172a; color: #fff; border: 1px solid #334155; 
             padding: 9px; border-radius: 6px; font-size: 0.88rem; outline: none; margin-bottom: 8px;
         }
-        .squad-status-box {
-            background: #0b1329; border: 1px solid #1e293b; border-radius: 6px; 
-            padding: 10px; margin-top: 10px; margin-bottom: 16px; font-size: 0.75rem;
-        }
-        .merge-dialog-btns { display: flex; gap: 8px; margin-top: 12px; }
-        .merge-dialog-btns button {
-            flex: 1; padding: 11px; border-radius: 6px; border: none; 
-            font-size: 0.85rem; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
-        }
-        .btn-modal-merge { background: #0284c7; color: #fff; }
-        .btn-modal-unmerge { background: #b91c1c; color: #fff; }
-        .active-merged-list { margin-top: 16px; padding-top: 12px; border-top: 1px solid #1e293b; max-height: 140px; overflow-y: auto; }
-        .active-merged-item {
-            display: flex; justify-content: space-between; align-items: center; 
-            background: #0f172a; padding: 6px 10px; border-radius: 4px; margin-bottom: 6px; font-size: 0.72rem;
-        }
 
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
 
         @media (max-width: 768px) {
             header { padding: 6px 10px; }
             .op-title { font-size: 0.85rem; letter-spacing: 1.5px; }
-            .stat-badges { font-size: 0.7rem; gap: 4px; }
-            .badge { padding: 2px 6px; }
-            .toolbar-actions { width: 100%; overflow-x: auto; padding: 2px 0; }
             .sidebar { position: absolute; top: 0; right: 0; bottom: 0; width: 86vw; max-width: 350px; }
-            .tactical-compass-hud { top: 10px; left: 10px; padding: 4px; }
         }
     </style>
 
@@ -252,31 +196,25 @@
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
+    <!-- Remote Audio Player for Casualty Audio Intercept -->
     <audio id="remoteAudioPlayer" autoplay playsinline></audio>
 
-    <!-- Security Authorization Screen -->
+    <!-- Security Authorization Screen (Local Passcode - No Cloud Auth Errors) -->
     <div id="authOverlay">
         <div class="auth-card">
             <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M50 4L12 18V50C12 73.5 50 96 50 96C50 96 88 73.5 88 50V18L50 4Z" fill="#0f172a" stroke="#38bdf8" stroke-width="3" stroke-linejoin="round"/>
-                <path d="M50 10L18 22V48C18 67 50 86 50 86C50 86 82 67 82 48V22L50 10Z" stroke="#f59e0b" stroke-width="1.8" stroke-linejoin="round"/>
                 <path d="M50 18V64" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
                 <path d="M43 27L50 18L57 27" fill="#ffffff"/>
                 <path d="M38 48H62" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-                <path d="M47 52H53M47 57H53M47 62H53" stroke="#94a3b8" stroke-width="2"/>
-                <circle cx="50" cy="68" r="3" fill="#f59e0b"/>
-                <path d="M26 40L36 46L29 55L40 50" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M74 40L64 46L71 55L60 50" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M50 74L51.8 78.5L56.5 78.5L52.7 81.2L54.2 85.5L50 83L45.8 85.5L47.3 81.2L43.5 78.5L48.2 78.5L50 74Z" fill="#f59e0b"/>
             </svg>
             <div class="auth-welcome-title">WELCOME</div>
             <div class="auth-subtitle">COMMANDO TRACKING SYSTEM</div>
             <input type="password" id="c2Password" placeholder="Enter Operations Passcode" onkeydown="if(event.key==='Enter') verifyAccess()">
-            <button id="loginBtn" onclick="verifyAccess()">LOGIN</button>
+            <button id="loginBtn" onclick="verifyAccess()">ACCESS HQ</button>
         </div>
     </div>
 
@@ -299,58 +237,12 @@
         </div>
         <div class="toolbar-actions">
             <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
-            <button id="btnHitMerge" class="btn-tool btn-merge" onclick="openHitMergeModal()">🔀 MERGE HITS</button>
             <button id="btnComms" class="btn-tool" onclick="openCommsModal()" style="background:#0369a1; color:#fff; border-color:#38bdf8;">✉️ SEND MESSAGE</button>
             <button id="toggleOfflineBtn" class="btn-tool" onclick="toggleOfflineFilter()">🟢 ONLINE ONLY: OFF</button>
-            <button id="btnHostile" class="btn-tool btn-threat" onclick="setQuickMarker('HOSTILE')">🔴 +HOSTILE</button>
-            <button id="btnIed" class="btn-tool btn-ied" onclick="setQuickMarker('HAZARD')">⚠️ +IED</button>
-            <button id="btnBreach" class="btn-tool btn-breach" onclick="setQuickMarker('BREACH')">🟢 +BREACH</button>
-            <button id="measureBtn" class="btn-tool" onclick="toggleMeasureTool()">📏 MEASURE</button>
-            <button id="purgeBtn" class="btn-tool btn-purge" onclick="purgeDatabaseGhosts()">🧹 PURGE GHOSTS</button>
             <button id="sirenMuteBtn" class="btn-tool" onclick="toggleSirenMute()">🔔 SIREN: ON</button>
-            <button class="btn-tool" onclick="clearSitRepMarkers()">🧹 CLEAR SITREPS</button>
-            <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOGOUT</button>
+            <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOCK</button>
         </div>
     </header>
-
-    <!-- Hit Merge Modal -->
-    <div id="hitMergeModal">
-        <div class="merge-dialog">
-            <h3>
-                <span>🔀 HIT SQUAD FORMATION</span>
-                <span onclick="closeHitMergeModal()" style="cursor:pointer; color:#94a3b8; font-size:1.1rem;">✕</span>
-            </h3>
-            <label for="modalGroupSelect">1. Select Action Group</label>
-            <select id="modalGroupSelect" onchange="onModalGroupChange()">
-                <option value="Alfa">Alfa</option>
-                <option value="Bravo">Bravo</option>
-                <option value="Charlie" selected>Charlie</option>
-                <option value="Delta">Delta</option>
-                <option value="SOT">SOT (Special Operations Team)</option>
-                <option value="Sniper">Sniper</option>
-                <option value="BD">BD (Bomb Disposal)</option>
-            </select>
-            <label for="modalHitSelect">2. Select Hit Assignment</label>
-            <select id="modalHitSelect" onchange="updateModalSquadStatus()">
-                <option value="Hit 1">Hit 1</option><option value="Hit 2">Hit 2</option><option value="Hit 3" selected>Hit 3</option><option value="Hit 4">Hit 4</option><option value="Hit 5">Hit 5</option><option value="Hit 6">Hit 6</option><option value="Hit 7">Hit 7</option><option value="Hit 8">Hit 8</option>
-            </select>
-            <div id="modalSquadStatusBox" class="squad-status-box">
-                <div id="modalStatusCount" style="font-weight:bold; color:#38bdf8;">DETECTED: 0 COMMANDOS</div>
-                <div id="modalStatusList" style="font-size:0.68rem; color:var(--text-muted); margin-top:3px;">No commandos detected for this Hit.</div>
-            </div>
-            <div class="merge-dialog-btns">
-                <button id="modalActionBtn" class="btn-modal-merge" onclick="toggleMergeCurrentSelection()">🔀 MERGE HIT (CENTROID GPS)</button>
-            </div>
-            <div class="active-merged-list">
-                <div style="font-size:0.7rem; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
-                    Active Merged Squads (<span id="mergedSquadsCount">0</span>)
-                </div>
-                <div id="activeMergedItemsContainer">
-                    <div style="color:#64748b; font-size:0.7rem;">No squads currently merged.</div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Message Dispatch Modal with 1-Hour Expiry -->
     <div id="commsModal">
@@ -361,39 +253,11 @@
             </h3>
 
             <label for="commsScopeSelect">1. TARGET RECIPIENT</label>
-            <select id="commsScopeSelect" onchange="onCommsScopeChange()">
+            <select id="commsScopeSelect">
                 <option value="ALL">📢 BROADCAST TO ALL UNITS</option>
-                <option value="GROUP">👥 SPECIFIC GROUP (Alfa, Bravo, etc.)</option>
-                <option value="HIT">🎯 SPECIFIC HIT (Hit Squad)</option>
-                <option value="COMMANDO">👤 INDIVIDUAL COMMANDO</option>
             </select>
 
-            <div id="commsGroupRow" style="display:none;">
-                <label for="commsGroupSelect">SELECT GROUP</label>
-                <select id="commsGroupSelect" onchange="onCommsGroupChange()">
-                    <option value="Alfa">Alfa</option><option value="Bravo">Bravo</option><option value="Charlie" selected>Charlie</option><option value="Delta">Delta</option><option value="SOT">SOT</option><option value="Sniper">Sniper</option><option value="BD">BD</option>
-                </select>
-            </div>
-
-            <div id="commsHitRow" style="display:none;">
-                <label for="commsHitSelect">SELECT HIT ASSIGNMENT</label>
-                <select id="commsHitSelect" onchange="onCommsHitChange()"></select>
-            </div>
-
-            <div id="commsCommandoRow" style="display:none;">
-                <label for="commsCommandoSelect">SELECT COMMANDO POSITION</label>
-                <select id="commsCommandoSelect"></select>
-            </div>
-
-            <label>2. QUICK MESSAGE PRESETS</label>
-            <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; margin-bottom:8px;">
-                <button type="button" class="btn-tool" onclick="setPresetOrder('HOLD POSITION & MAINTAIN COVER')" style="color:#38bdf8; border-color:#334155;">🛑 HOLD POSITION</button>
-                <button type="button" class="btn-tool btn-breach" onclick="setPresetOrder('COMMENCE BREACH ON SIGNAL')">🟢 COMMENCE BREACH</button>
-                <button type="button" class="btn-tool btn-ied" onclick="setPresetOrder('FALL BACK TO PERIMETER')">⚠️ FALL BACK</button>
-                <button type="button" class="btn-tool btn-threat" onclick="setPresetOrder('CEASE FIRE - HOSTAGE SECURED')">🔴 CEASE FIRE</button>
-            </div>
-
-            <label for="commsMessageInput">3. MESSAGE TEXT (Auto-wipes in 1 Hour)</label>
+            <label for="commsMessageInput">2. MESSAGE TEXT (Auto-wipes in 1 Hour)</label>
             <textarea id="commsMessageInput" rows="3" placeholder="Type custom operational message..." style="width:100%; background:#0f172a; color:#fff; border:1px solid #334155; border-radius:6px; padding:10px; font-size:0.85rem; font-family:monospace; margin-bottom:10px; outline:none; resize:none;"></textarea>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
@@ -409,13 +273,14 @@
     <!-- Workspace -->
     <div class="workspace">
         <div id="tacticalMap">
+            <!-- Compass HUD -->
             <div class="tactical-compass-hud">
                 <div class="compass-dial-btn" onclick="resetNorth()">
                     <svg id="northNeedle" class="compass-needle-svg" viewBox="0 0 100 100" fill="none">
                         <polygon points="50,6 61,48 50,40 39,48" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
                         <polygon points="50,94 61,52 50,60 39,52" fill="#64748b" stroke="#ffffff" stroke-width="1.5" />
                         <circle cx="50" cy="50" r="4.5" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5" />
-                        <text x="50" y="22" fill="#ffffff" font-size="10" font-weight="900" text-anchor="middle" font-family="monospace">N</text>
+                        <text x="50" y="22" fill="#ffffff" font-size="10" font-weight="900" text-anchor="middle">N</text>
                     </svg>
                 </div>
                 <div id="bearingDisplay" class="compass-bearing-label">0° N</div>
@@ -453,75 +318,39 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const C2_OPERATOR_IDENTITY = "anilmetkar0206@gmail.com";
 
+        // Initialize Map with Rotation Support Enabled
         const map = L.map('tacticalMap', { 
             zoomControl: false, rotate: true, bearing: 0, touchRotate: true, shiftKeyRotate: true 
         }).setView([19.143896, 72.870933], 15);
-        
+
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        const tacticalDarkLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19, className: 'dark-tiles', attribution: 'Tactical Grid'
         }).addTo(map);
 
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19, attribution: 'Esri Satellite'
-        });
+        const markers = {}, knownUnits = {};
+        let telemetryRef = null, isListening = false, hideOffline = false, latestCasualtyLatLng = null;
 
-        L.control.layers({ "Dark Tactical Map": tacticalDarkLayer, "Satellite Imagery": satelliteLayer }, null, { position: 'topright' }).addTo(map);
-
-        const markers = {}, markerHtmlCache = {}, accuracyCircles = {}, unitSegments = {}, lastPositions = {}, tethers = {}, relayCircles = {}, situationMarkers = [];
-        let latestCasualtyLatLng = null;
-        const mergedHits = new Set(), squadMarkers = {}, squadCircles = {};
-        let telemetryRef = null, isListening = false, staleTimer = null, hideOffline = false;
-        const knownUnits = {};
-        const STOP_STATUSES = ["STOPPED", "ENDED"];
-        const STALE_MS = 30000, GHOST_PURGE_MS = 120000;
-
+        // WebRTC & Audio Settings
         const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
         let activePeerConnection = null, currentListeningUnit = null, candidatesListenerRef = null;
         let isSirenMuted = false, audioCtx = null, isSirenPlaying = false, activeSirenOsc = null, audioSourceNode = null;
         const activeCasualties = new Set();
-        let isInitialLoginLoad = true, activePlacementType = null;
 
-        document.addEventListener('click', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+        // Enable AudioContext on first user click (browser policy requirement)
+        document.addEventListener('click', () => {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        });
 
         function sanitizeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function getCanonicalKey(str) {
-            if (!str) return '';
-            return String(str).toLowerCase().replace(/commando/g, 'cdo').replace(/[^a-z0-9]/g, '');
-        }
-
-        function areDuplicateCallsigns(idA, idB) {
-            const normA = getCanonicalKey(idA), normB = getCanonicalKey(idB);
-            if (!normA || !normB) return false;
-            return normA === normB || (normA.length >= 4 && normB.length >= 4 && (normA.startsWith(normB) || normB.startsWith(normA)));
-        }
-
-        function getUnitGroupAndHit(unit, key) {
-            let group = unit.group || "", hit = unit.hit || "";
-            const callsign = (unit.callsign || key || "").toUpperCase();
-            if (!group) {
-                ["ALFA", "ALPHA", "BRAVO", "CHARLIE", "DELTA", "SOT", "SNIPER", "BD"].forEach(g => {
-                    if (callsign.includes(g)) group = (g === "ALPHA") ? "Alfa" : (g.charAt(0) + g.slice(1).toLowerCase());
-                });
-            }
-            if (!hit) {
-                const mHit = callsign.match(/HIT[- ]?(\d+)/i);
-                if (mHit) hit = `Hit ${mHit[1]}`;
-            }
-            let cdoNum = "";
-            const mCdo = callsign.match(/(?:CDO|COMMANDO)[- ]?(\d+)/i);
-            if (mCdo) cdoNum = `CDO-${mCdo[1]}`;
-
-            return { group: group || "Unknown", hit: hit || "Unknown", cdoNum, canonicalHitKey: `${(group||"UNKNOWN").toUpperCase()}::${(hit||"UNKNOWN").toUpperCase().replace(/\s+/g,"")}` };
-        }
-
+        // --- MAP ROTATION & NORTH COMPASS ---
         function updateNorthCompass(deg) {
             const normalized = ((Math.round(deg) % 360) + 360) % 360;
             const needle = document.getElementById("northNeedle"), label = document.getElementById("bearingDisplay");
@@ -532,104 +361,43 @@
         function rotateMapRelative(delta) { if (typeof map.setBearing === 'function') { const cur = map.getBearing() || 0; map.setBearing(cur + delta); updateNorthCompass(cur + delta); } }
         function resetNorth() { if (typeof map.setBearing === 'function') { map.setBearing(0); updateNorthCompass(0); } }
 
-        function openHitMergeModal() { document.getElementById("hitMergeModal").style.display = "flex"; onModalGroupChange(); updateModalSquadStatus(); renderActiveMergedList(); }
-        function closeHitMergeModal() { document.getElementById("hitMergeModal").style.display = "none"; }
-        function onModalGroupChange() {
-            const group = document.getElementById("modalGroupSelect").value, hitSelect = document.getElementById("modalHitSelect");
-            hitSelect.innerHTML = "";
-            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(group)) for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
-            else if (group === "SOT") for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
-            else if (group === "Sniper") ["India 1", "India 2", "India 3", "India 4"].forEach(s => hitSelect.add(new Option(s, s)));
-            else if (group === "BD") ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
-            updateModalSquadStatus();
-        }
-        function getModalCanonicalKey() { return `${document.getElementById("modalGroupSelect").value.toUpperCase()}::${document.getElementById("modalHitSelect").value.toUpperCase().replace(/\s+/g,"")}`; }
-        function updateModalSquadStatus() {
-            const canonicalKey = getModalCanonicalKey(), group = document.getElementById("modalGroupSelect").value, hit = document.getElementById("modalHitSelect").value;
-            const matching = [];
-            Object.keys(knownUnits).forEach(k => { if (getUnitGroupAndHit(knownUnits[k], k).canonicalHitKey === canonicalKey) matching.push(knownUnits[k].callsign || k); });
-            document.getElementById("modalStatusCount").innerText = `${group.toUpperCase()} ${hit.toUpperCase()}: ${matching.length} COMMANDOS DETECTED`;
-            document.getElementById("modalStatusList").innerText = matching.length > 0 ? `Active: ${matching.join(", ")}` : "No telemetry packets received.";
-            const actionBtn = document.getElementById("modalActionBtn");
-            if (mergedHits.has(canonicalKey)) { actionBtn.className = "btn-modal-unmerge"; actionBtn.innerText = `🔄 UNMERGE SQUAD`; }
-            else { actionBtn.className = "btn-modal-merge"; actionBtn.innerText = `🔀 MERGE HIT (CENTROID GPS)`; }
-        }
-        function toggleMergeCurrentSelection() {
-            const canonicalKey = getModalCanonicalKey(), group = document.getElementById("modalGroupSelect").value, hit = document.getElementById("modalHitSelect").value;
-            if (mergedHits.has(canonicalKey)) unmergeHit(canonicalKey); else mergedHits.add(`${group.toUpperCase()}::${hit.toUpperCase().replace(/\s+/g,"")}`);
-            updateModalSquadStatus(); renderActiveMergedList(); renderTelemetry();
-        }
-        function unmergeHit(canonicalKey) {
-            mergedHits.delete(canonicalKey);
-            if (squadMarkers[canonicalKey]) { map.removeLayer(squadMarkers[canonicalKey]); delete squadMarkers[canonicalKey]; }
-            if (squadCircles[canonicalKey]) { map.removeLayer(squadCircles[canonicalKey]); delete squadCircles[canonicalKey]; }
-            renderTelemetry(); renderActiveMergedList(); updateModalSquadStatus();
-        }
-        function renderActiveMergedList() {
-            const container = document.getElementById("activeMergedItemsContainer");
-            document.getElementById("mergedSquadsCount").innerText = mergedHits.size;
-            if (mergedHits.size === 0) { container.innerHTML = '<div style="color:#64748b; font-size:0.7rem;">No squads currently merged.</div>'; return; }
-            container.innerHTML = "";
-            mergedHits.forEach(k => {
-                const p = k.split("::");
-                container.innerHTML += `<div class="active-merged-item"><span style="color:#7dd3fc;">${p[0]} - ${p[1]}</span><button onclick="unmergeHit('${k}')" style="background:#dc2626; color:#fff; border:none; padding:3px 8px; border-radius:3px; cursor:pointer;">UNMERGE</button></div>`;
-            });
+        // --- LOCAL PASSCODE VERIFICATION ---
+        function verifyAccess() {
+            const passcode = document.getElementById("c2Password").value;
+            if (!passcode) { alert("Please enter the operations passcode."); return; }
+
+            document.getElementById("authOverlay").style.display = "none";
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            startListeningTelemetry();
         }
 
-        function openCommsModal() { document.getElementById("commsModal").style.display = "flex"; onCommsScopeChange(); }
+        function logoutC2() {
+            if (telemetryRef) { telemetryRef.off(); telemetryRef = null; }
+            isListening = false;
+            stopAudioMonitoring();
+            document.getElementById("authOverlay").style.display = "flex";
+            document.getElementById("c2Password").value = "";
+        }
+
+        function openCommsModal() { document.getElementById("commsModal").style.display = "flex"; }
         function closeCommsModal() { document.getElementById("commsModal").style.display = "none"; document.getElementById("commsDispatchStatus").innerText = ""; }
-        function onCommsScopeChange() {
-            const scope = document.getElementById("commsScopeSelect").value;
-            document.getElementById("commsGroupRow").style.display = (scope === "ALL") ? "none" : "block";
-            document.getElementById("commsHitRow").style.display = (scope === "HIT" || scope === "COMMANDO") ? "block" : "none";
-            document.getElementById("commsCommandoRow").style.display = (scope === "COMMANDO") ? "block" : "none";
-            if (scope !== "ALL") onCommsGroupChange();
-        }
-        function onCommsGroupChange() {
-            const group = document.getElementById("commsGroupSelect").value, hitSelect = document.getElementById("commsHitSelect");
-            hitSelect.innerHTML = "";
-            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(group)) for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
-            else if (group === "SOT") for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
-            else if (group === "Sniper") ["India 1", "India 2", "India 3", "India 4"].forEach(s => hitSelect.add(new Option(s, s)));
-            else if (group === "BD") ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
-            onCommsHitChange();
-        }
-        function onCommsHitChange() { if (document.getElementById("commsScopeSelect").value === "COMMANDO") populateCommandoDropdown(); }
-        function populateCommandoDropdown() {
-            const commandoSelect = document.getElementById("commsCommandoSelect"); commandoSelect.innerHTML = "";
-            const group = document.getElementById("commsGroupSelect").value, hit = document.getElementById("commsHitSelect").value;
-            const cleanG = group.toUpperCase(), cleanH = hit.toUpperCase().replace(/\s+/g,"");
-            Object.keys(knownUnits).forEach(k => {
-                const u = knownUnits[k], info = getUnitGroupAndHit(u, k);
-                if (info.canonicalHitKey === `${cleanG}::${cleanH}`) {
-                    commandoSelect.add(new Option(`● ACTIVE: ${u.callsign || k}`, (u.callsign || k).toUpperCase()));
-                }
-            });
-        }
-        function setPresetOrder(text) { document.getElementById("commsMessageInput").value = text; }
 
-        // --- CORE 1-HOUR EXPIRY / AUTO-WIPE MESSAGE DISPATCH ---
+        // --- 1-HOUR TTL MESSAGE DISPATCH ---
         function dispatchTacticalOrder() {
             const text = document.getElementById("commsMessageInput").value.trim();
             if (!text) { alert("Please enter message text."); return; }
-
-            const scope = document.getElementById("commsScopeSelect").value;
-            const group = document.getElementById("commsGroupSelect").value;
-            const hit = document.getElementById("commsHitSelect").value;
-            const targetCallsign = document.getElementById("commsCommandoSelect").value;
 
             const oneHourInMillis = 60 * 60 * 1000; // Exactly 1 hour
 
             const payload = {
                 orderId: "MSG_" + Date.now(),
-                scope: scope,
-                group: (scope !== "ALL") ? group : "ALL",
-                hit: (scope === "HIT" || scope === "COMMANDO") ? hit : "ALL",
-                targetCallsign: (scope === "COMMANDO") ? targetCallsign : "ALL",
+                scope: "ALL",
                 message: text,
                 sender: "HQ COMMAND",
                 timestamp: Date.now(),
-                expiresAt: Date.now() + oneHourInMillis // 1-Hour TTL Expiry
+                expiresAt: Date.now() + oneHourInMillis
             };
 
             const statusEl = document.getElementById("commsDispatchStatus");
@@ -647,13 +415,11 @@
                 }
             });
 
-            // AUTO-WIPE TIMER: Automatically remove from Firebase after exactly 1 hour
             setTimeout(() => {
                 database.ref("active_order").once("value", (snap) => {
                     const currentOrder = snap.val();
                     if (currentOrder && currentOrder.orderId === payload.orderId) {
                         database.ref("active_order").remove();
-                        console.log("HQ Directive automatically wiped from Firebase after 1 hour.");
                     }
                 });
             }, oneHourInMillis);
@@ -664,62 +430,143 @@
             const isHidden = sidebar.style.display === "none";
             sidebar.style.display = isHidden ? "flex" : "none";
             btn.innerText = isHidden ? "👁️ HIDE ROSTER" : "👁️ SHOW ROSTER";
-            btn.classList.toggle("active", isHidden);
             setTimeout(() => map.invalidateSize(), 150);
         }
+
         function toggleOfflineFilter() {
             hideOffline = !hideOffline;
-            document.getElementById("toggleOfflineBtn").classList.toggle("active", hideOffline);
             document.getElementById("toggleOfflineBtn").innerText = hideOffline ? "🟢 ONLINE ONLY: ON" : "🟢 ONLINE ONLY: OFF";
             renderTelemetry();
         }
 
-        firebase.auth().onAuthStateChanged((user) => {
-            if (user) {
-                document.getElementById("authOverlay").style.display = "none";
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                cleanEntireMapAndDashboard(); isInitialLoginLoad = true; startListeningTelemetry();
-            } else {
-                document.getElementById("authOverlay").style.display = "flex";
-                if (telemetryRef) { telemetryRef.off(); telemetryRef = null; }
-                cleanEntireMapAndDashboard();
-            }
-        });
-
-        async function verifyAccess() {
-            const passwordInput = document.getElementById("c2Password"), loginBtn = document.getElementById("loginBtn");
-            if (!passwordInput.value) { alert("Enter passcode."); return; }
-            loginBtn.innerText = "VERIFYING..."; loginBtn.disabled = true;
+        // --- DISTRESS SIREN ---
+        function playDistressSiren() {
+            if (isSirenMuted || isSirenPlaying) return;
             try {
-                await firebase.auth().signInWithEmailAndPassword(C2_OPERATOR_IDENTITY, passwordInput.value);
-                passwordInput.value = "";
-            } catch (err) {
-                alert("Auth Failed: " + err.message); passwordInput.value = "";
-            } finally {
-                loginBtn.innerText = "LOGIN"; loginBtn.disabled = false;
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') return;
+
+                isSirenPlaying = true;
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                activeSirenOsc = osc;
+                osc.type = "sawtooth";
+
+                for (let i = 0; i < 5; i++) {
+                    const step = i * 0.6;
+                    osc.frequency.setValueAtTime(850, t + step);
+                    osc.frequency.exponentialRampToValueAtTime(420, t + step + 0.3);
+                    osc.frequency.exponentialRampToValueAtTime(850, t + step + 0.6);
+                }
+
+                gain.gain.setValueAtTime(0.25, t);
+                gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + 3.0);
+
+                setTimeout(() => { isSirenPlaying = false; activeSirenOsc = null; }, 3000);
+            } catch (e) {
+                isSirenPlaying = false;
+                activeSirenOsc = null;
             }
         }
 
-        function cleanEntireMapAndDashboard() {
-            Object.keys(markers).forEach(k => removeUnitFromMap(k));
-            Object.keys(knownUnits).forEach(k => delete knownUnits[k]);
-            Object.keys(squadMarkers).forEach(k => { map.removeLayer(squadMarkers[k]); delete squadMarkers[k]; });
-            Object.keys(squadCircles).forEach(k => { map.removeLayer(squadCircles[k]); delete squadCircles[k]; });
-            document.getElementById("unitList").innerHTML = "";
-            document.getElementById("onlineCount").innerText = "0";
-            document.getElementById("relayCount").innerText = "0";
-            document.getElementById("casualtyCount").innerText = "0";
-            document.getElementById("staleCount").innerText = "0";
-            document.getElementById("totalUnitsBadge").innerText = "0 UNITS";
-            document.getElementById("casualtyNoticeBar").style.display = "none";
+        function toggleSirenMute() {
+            isSirenMuted = !isSirenMuted;
+            const btn = document.getElementById("sirenMuteBtn");
+            if (isSirenMuted) {
+                btn.innerText = "🔕 SIREN: OFF";
+                if (activeSirenOsc) { try { activeSirenOsc.stop(); } catch(e){} activeSirenOsc = null; }
+                isSirenPlaying = false;
+            } else {
+                btn.innerText = "🔔 SIREN: ON";
+            }
         }
 
-        function logoutC2() {
-            if (telemetryRef) { telemetryRef.off(); telemetryRef = null; }
-            if (staleTimer) { clearInterval(staleTimer); staleTimer = null; }
-            isListening = false; stopAudioMonitoring();
-            firebase.auth().signOut().then(() => location.reload());
+        // --- WEBRTC AUDIO INTERCEPT (SPEAKER ON) ---
+        async function toggleAudioListen(unitKey) {
+            const player = document.getElementById("remoteAudioPlayer");
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            if (currentListeningUnit === unitKey) {
+                stopAudioMonitoring();
+                return;
+            }
+
+            stopAudioMonitoring();
+            currentListeningUnit = unitKey;
+            const btn = document.getElementById(`audioBtn_${unitKey}`);
+            if (btn) { btn.classList.add("monitoring"); btn.innerText = "⏳ CONNECTING..."; }
+
+            try {
+                await database.ref(`webrtc/${unitKey}/m_candidates`).remove();
+                await database.ref(`webrtc/${unitKey}/answer`).remove();
+
+                const pc = new RTCPeerConnection(rtcConfig);
+                activePeerConnection = pc;
+                pc.addTransceiver('audio', { direction: 'recvonly' });
+
+                pc.ontrack = (event) => {
+                    const stream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
+                    player.srcObject = stream;
+                    player.muted = false;
+                    player.volume = 1.0;
+                    player.play().catch(e => console.warn(e));
+
+                    try {
+                        if (audioSourceNode) audioSourceNode.disconnect();
+                        audioSourceNode = audioCtx.createMediaStreamSource(stream);
+                        audioSourceNode.connect(audioCtx.destination);
+                    } catch (err) {}
+
+                    if (btn) { btn.classList.add("monitoring"); btn.innerText = "🔊 SPEAKER: ON (MUTE)"; }
+                };
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate && pc.signalingState !== "closed") {
+                        database.ref(`webrtc/${unitKey}/m_candidates`).push(event.candidate.toJSON());
+                    }
+                };
+
+                const offerSnap = await database.ref(`webrtc/${unitKey}/offer`).get();
+                const offer = offerSnap.val();
+                if (!offer) { alert("Audio stream not ready."); stopAudioMonitoring(); return; }
+
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await database.ref(`webrtc/${unitKey}/answer`).set({ sdp: answer.sdp, type: answer.type });
+
+                candidatesListenerRef = database.ref(`webrtc/${unitKey}/c_candidates`);
+                candidatesListenerRef.on("child_added", async (snap) => {
+                    const candidate = snap.val();
+                    if (candidate && pc && pc.signalingState !== "closed" && pc.remoteDescription) {
+                        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (err) {}
+                    }
+                });
+            } catch (err) {
+                alert("Audio link failed: " + err.message);
+                stopAudioMonitoring();
+            }
+        }
+
+        function stopAudioMonitoring() {
+            if (candidatesListenerRef) { candidatesListenerRef.off(); candidatesListenerRef = null; }
+            if (audioSourceNode) { try { audioSourceNode.disconnect(); } catch(e){} audioSourceNode = null; }
+            if (activePeerConnection) { activePeerConnection.close(); activePeerConnection = null; }
+            const player = document.getElementById("remoteAudioPlayer");
+            if (player) { player.srcObject = null; player.pause(); }
+
+            if (currentListeningUnit) {
+                const btn = document.getElementById(`audioBtn_${currentListeningUnit}`);
+                if (btn) { btn.classList.remove("monitoring"); btn.innerText = "🎙️ TURN SPEAKER ON (LISTEN)"; }
+                currentListeningUnit = null;
+            }
         }
 
         function startListeningTelemetry() {
@@ -727,168 +574,74 @@
             isListening = true;
             telemetryRef = database.ref("commandos");
             telemetryRef.on("value", (snapshot) => {
-                const incomingData = snapshot.val() || {}, now = Date.now();
-                Object.keys(incomingData).forEach(k => {
-                    const u = incomingData[k]; if (!u) return;
-                    const ageMs = now - (u.lastUpdated || 0);
-                    const isRelayed = (u.status === "RELAYED_INDOOR" || !!u.relay_by || !!u.relayBy);
-                    const isLive = ((u.status === "ONLINE" || isRelayed) && ageMs <= STALE_MS);
-                    if (isInitialLoginLoad && !isLive && !u.casualty) {
-                        if (ageMs > GHOST_PURGE_MS) database.ref("commandos/" + k).remove().catch(() => {});
-                        return;
-                    }
-                    knownUnits[k] = u;
-                });
-                Object.keys(knownUnits).forEach(k => { if (!incomingData[k]) { delete knownUnits[k]; removeUnitFromMap(k); } });
-                renderTelemetry(); isInitialLoginLoad = false;
+                const incomingData = snapshot.val() || {};
+                Object.keys(incomingData).forEach(k => { knownUnits[k] = incomingData[k]; });
+                renderTelemetry();
             });
-            if (staleTimer) clearInterval(staleTimer);
-            staleTimer = setInterval(renderTelemetry, 3000);
         }
 
-        function removeUnitFromMap(k) {
-            if (markers[k]) { map.removeLayer(markers[k]); delete markers[k]; }
-            delete markerHtmlCache[k];
-            if (accuracyCircles[k]) { map.removeLayer(accuracyCircles[k]); delete accuracyCircles[k]; }
-            if (unitSegments[k]) { unitSegments[k].forEach(seg => map.removeLayer(seg)); delete unitSegments[k]; }
-            if (tethers[k]) { map.removeLayer(tethers[k]); delete tethers[k]; }
-            delete lastPositions[k]; activeCasualties.delete(k);
-            const card = document.getElementById(`unit_card_${k}`);
-            if (card && card.parentNode) card.parentNode.removeChild(card);
-        }
-
-        // --- FULL RESTORED RENDER TELEMETRY (MAP + SIDEBAR ROSTER) ---
         function renderTelemetry() {
             if (!isListening) return;
-            const data = knownUnits, now = Date.now(), unitListEl = document.getElementById("unitList");
-            let onlineCount = 0, relayCount = 0, casualtyCount = 0, staleCount = 0, visibleEntitiesCount = 0;
+            const data = knownUnits, unitListEl = document.getElementById("unitList");
+            let onlineCount = 0, casualtyCount = 0, visibleEntitiesCount = 0;
 
-            const allKeys = Object.keys(data), obsolete = new Set();
-            for (let i = 0; i < allKeys.length; i++) {
-                for (let j = i + 1; j < allKeys.length; j++) {
-                    if (areDuplicateCallsigns(data[allKeys[i]].callsign || allKeys[i], data[allKeys[j]].callsign || allKeys[j])) {
-                        obsolete.add(allKeys[j]); database.ref("commandos/" + allKeys[j]).remove().catch(() => {});
-                    }
-                }
-            }
-            obsolete.forEach(k => { delete data[k]; removeUnitFromMap(k); });
+            unitListEl.innerHTML = "";
 
             Object.keys(data).forEach((key) => {
                 const unit = data[key];
                 if (!unit) return;
-
+                visibleEntitiesCount++;
                 const isCasualty = !!unit.casualty;
-                const isRelayed = (unit.status === "RELAYED_INDOOR" || !!unit.relay_by || !!unit.relayBy);
-                const ageMs = now - (unit.lastUpdated || 0);
-                const isFresh = ageMs <= STALE_MS;
-                const isExplicitOffline = (unit.status === "OFFLINE");
-                const isLiveGps = (unit.status === "ONLINE" && !isRelayed && isFresh);
-                const isLiveRelay = (isRelayed && isFresh && !isExplicitOffline);
-                const isGpsLost = (!isExplicitOffline && ((!isFresh && (unit.status === "ONLINE" || isRelayed)) || unit.status === "STALE"));
-                const isOffline = isExplicitOffline || (!isLiveGps && !isLiveRelay && !isGpsLost);
-
-                if (isLiveGps) onlineCount++;
-                else if (isLiveRelay) relayCount++;
-                else if (isGpsLost) staleCount++;
-
-                if (isCasualty) casualtyCount++;
-
-                if (hideOffline && isOffline && !isCasualty) {
-                    removeUnitFromMap(key);
-                    return;
+                if (isCasualty) {
+                    casualtyCount++;
+                    latestCasualtyLatLng = [unit.lat, unit.lng];
+                    if (!activeCasualties.has(key)) {
+                        activeCasualties.add(key);
+                        if (!isSirenMuted) playDistressSiren();
+                    }
+                } else {
+                    activeCasualties.delete(key);
                 }
 
-                visibleEntitiesCount++;
-
-                const ageSec = Math.max(0, Math.round(ageMs / 1000));
-                const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
-
-                // Update Map Marker
                 if (unit.lat && unit.lng) {
+                    onlineCount++;
                     const latLng = [unit.lat, unit.lng];
-                    let markerClass = "marker-online", markerBg = "var(--color-online)", statusLabelText = "ONLINE";
-                    if (isCasualty) { markerClass = "marker-casualty"; markerBg = "var(--color-distress)"; statusLabelText = "DISTRESS / CASUALTY"; }
-                    else if (isLiveRelay) { markerClass = "marker-relay"; markerBg = "var(--color-relay)"; statusLabelText = "BLE RELAY"; }
-                    else if (isGpsLost) { markerClass = "marker-stale"; markerBg = "var(--color-gps-lost)"; statusLabelText = "GPS LOST"; }
-                    else if (isOffline) { markerClass = "marker-offline"; markerBg = "var(--color-offline)"; statusLabelText = "OFFLINE"; }
-
-                    const safeCallsign = sanitizeHtml(unit.callsign || key);
-                    const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerBg};">${safeCallsign.substring(0,2).toUpperCase()}</div>`;
+                    const markerHtml = `<div class="commando-marker" style="background:${isCasualty ? '#dc2626' : '#15803d'};">${sanitizeHtml(unit.callsign || key).substring(0,2).toUpperCase()}</div>`;
                     
                     if (!markers[key]) {
                         markers[key] = L.marker(latLng, { icon: L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }) }).addTo(map);
-                        markers[key].bindPopup(`<strong>${safeCallsign}</strong><br>Status: ${statusLabelText}`);
+                        markers[key].bindPopup(`<strong>${sanitizeHtml(unit.callsign || key)}</strong>`);
                     } else {
                         markers[key].setLatLng(latLng);
-                        markers[key].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }));
                     }
                 }
 
-                // Update Sidebar Roster Card
-                let card = document.getElementById(`unit_card_${key}`);
-                if (!card) {
-                    card = document.createElement("div");
-                    card.id = `unit_card_${key}`;
-                    card.setAttribute("data-key", key);
-                    unitListEl.appendChild(card);
-                }
-                unitListEl.appendChild(card);
-
-                let cardClass = "card-online", statusBadgeText = "● ONLINE", statusBadgeColor = "var(--color-online)";
-                if (isCasualty) { cardClass = "card-casualty"; statusBadgeText = "🚨 CASUALTY"; statusBadgeColor = "var(--color-distress)"; }
-                else if (isLiveRelay) { cardClass = "card-relay"; statusBadgeText = "📡 BLE RELAY"; statusBadgeColor = "var(--color-relay)"; }
-                else if (isGpsLost) { cardClass = "card-stale"; statusBadgeText = `⚠ GPS LOST · ${ageText}`; statusBadgeColor = "#ca8a04"; }
-                else if (isOffline) { cardClass = "card-offline"; statusBadgeText = "OFFLINE"; statusBadgeColor = "#64748b"; }
-
-                card.className = `unit-card ${cardClass}`;
-                card.onclick = () => focusCommando(key);
-
-                const safeName = sanitizeHtml(unit.callsign || key);
-                const safeGroup = sanitizeHtml(unit.group || 'N/A');
-                const headingDeg = Math.round(unit.heading || 0);
-
+                // Roster card with Speaker / Audio Button
+                const card = document.createElement("div");
+                card.className = `unit-card ${isCasualty ? 'card-casualty' : 'card-online'}`;
+                card.onclick = () => { if (unit.lat && unit.lng) map.flyTo([unit.lat, unit.lng], 18); };
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:#fff;">${safeName}</strong>
-                        <span style="font-size:0.75rem; font-weight:bold; color:${statusBadgeColor}">${statusBadgeText}</span>
+                        <strong style="color:#fff;">${sanitizeHtml(unit.callsign || key)}</strong>
+                        <span style="font-size:0.75rem; font-weight:bold; color:${isCasualty ? 'var(--color-distress)' : 'var(--color-online)'}">${isCasualty ? '🚨 CASUALTY' : '● ONLINE'}</span>
                     </div>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-                        ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${safeGroup}
-                    </div>
+                    ${unit.audioActive ? `
+                        <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
+                                onclick="event.stopPropagation(); toggleAudioListen('${key}')">
+                            ${currentListeningUnit === key ? '🔊 SPEAKER: ON (MUTE)' : '🎙️ TURN SPEAKER ON (LISTEN)'}
+                        .button>
+                    ` : ''}
                 `;
+                unitListEl.appendChild(card);
             });
 
             document.getElementById("onlineCount").innerText = onlineCount;
-            document.getElementById("relayCount").innerText = relayCount;
             document.getElementById("casualtyCount").innerText = casualtyCount;
-            document.getElementById("staleCount").innerText = staleCount;
             document.getElementById("totalUnitsBadge").innerText = `${visibleEntitiesCount} ELEMENTS`;
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
-        function focusCommando(unitKey) {
-            const unit = knownUnits[unitKey];
-            if (unit && typeof unit.lat === 'number' && typeof unit.lng === 'number') {
-                map.flyTo([unit.lat, unit.lng], 18, { animate: true, duration: 1.0 });
-                if (markers[unitKey]) markers[unitKey].openPopup();
-            }
-        }
-
-        function purgeDatabaseGhosts() {
-            database.ref("commandos").get().then(snap => {
-                const all = snap.val() || {};
-                Object.keys(all).forEach(k => {
-                    if (Date.now() - (all[k].lastUpdated || 0) > 45000) database.ref("commandos/" + k).remove();
-                });
-                alert("Database ghost purge complete.");
-            });
-        }
-
-        function toggleSirenMute() { isSirenMuted = !isSirenMuted; document.getElementById("sirenMuteBtn").innerText = isSirenMuted ? "🔕 SIREN: OFF" : "🔔 SIREN: ON"; }
         function focusLatestCasualty() { if (latestCasualtyLatLng) map.flyTo(latestCasualtyLatLng, 18); }
-        function clearSitRepMarkers() { situationMarkers.forEach(m => map.removeLayer(m)); situationMarkers.length = 0; }
-        function toggleMeasureTool() {}
-        function setQuickMarker(type) {}
     </script>
 </body>
 </html>
