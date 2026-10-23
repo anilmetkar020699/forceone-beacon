@@ -636,7 +636,6 @@
             statusEl.innerText = "TRANSMITTING (1-HR TTL)...";
             statusEl.style.color = "#38bdf8";
 
-            // 1. Save to Firebase active_order
             database.ref("active_order").set(payload, (err) => {
                 if (err) {
                     statusEl.innerText = "SEND FAILED";
@@ -648,7 +647,7 @@
                 }
             });
 
-            // 2. AUTO-WIPE TIMER: Automatically remove from Firebase after exactly 1 hour
+            // AUTO-WIPE TIMER: Automatically remove from Firebase after exactly 1 hour
             setTimeout(() => {
                 database.ref("active_order").once("value", (snap) => {
                     const currentOrder = snap.val();
@@ -758,6 +757,7 @@
             if (card && card.parentNode) card.parentNode.removeChild(card);
         }
 
+        // --- FULL RESTORED RENDER TELEMETRY (MAP + SIDEBAR ROSTER) ---
         function renderTelemetry() {
             if (!isListening) return;
             const data = knownUnits, now = Date.now(), unitListEl = document.getElementById("unitList");
@@ -773,24 +773,89 @@
             }
             obsolete.forEach(k => { delete data[k]; removeUnitFromMap(k); });
 
-            // Render logic...
-            Object.keys(data).forEach(key => {
+            Object.keys(data).forEach((key) => {
                 const unit = data[key];
                 if (!unit) return;
-                visibleEntitiesCount++;
+
                 const isCasualty = !!unit.casualty;
+                const isRelayed = (unit.status === "RELAYED_INDOOR" || !!unit.relay_by || !!unit.relayBy);
                 const ageMs = now - (unit.lastUpdated || 0);
+                const isFresh = ageMs <= STALE_MS;
+                const isExplicitOffline = (unit.status === "OFFLINE");
+                const isLiveGps = (unit.status === "ONLINE" && !isRelayed && isFresh);
+                const isLiveRelay = (isRelayed && isFresh && !isExplicitOffline);
+                const isGpsLost = (!isExplicitOffline && ((!isFresh && (unit.status === "ONLINE" || isRelayed)) || unit.status === "STALE"));
+                const isOffline = isExplicitOffline || (!isLiveGps && !isLiveRelay && !isGpsLost);
+
+                if (isLiveGps) onlineCount++;
+                else if (isLiveRelay) relayCount++;
+                else if (isGpsLost) staleCount++;
+
                 if (isCasualty) casualtyCount++;
+
+                if (hideOffline && isOffline && !isCasualty) {
+                    removeUnitFromMap(key);
+                    return;
+                }
+
+                visibleEntitiesCount++;
+
+                const ageSec = Math.max(0, Math.round(ageMs / 1000));
+                const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
+
+                // Update Map Marker
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
-                    const markerHtml = `<div class="commando-marker ${isCasualty ? 'marker-casualty' : 'marker-online'}" style="background:${isCasualty ? '#dc2626' : '#15803d'};">${sanitizeHtml(unit.callsign || key).substring(0,2).toUpperCase()}</div>`;
+                    let markerClass = "marker-online", markerBg = "var(--color-online)", statusLabelText = "ONLINE";
+                    if (isCasualty) { markerClass = "marker-casualty"; markerBg = "var(--color-distress)"; statusLabelText = "DISTRESS / CASUALTY"; }
+                    else if (isLiveRelay) { markerClass = "marker-relay"; markerBg = "var(--color-relay)"; statusLabelText = "BLE RELAY"; }
+                    else if (isGpsLost) { markerClass = "marker-stale"; markerBg = "var(--color-gps-lost)"; statusLabelText = "GPS LOST"; }
+                    else if (isOffline) { markerClass = "marker-offline"; markerBg = "var(--color-offline)"; statusLabelText = "OFFLINE"; }
+
+                    const safeCallsign = sanitizeHtml(unit.callsign || key);
+                    const markerHtml = `<div class="commando-marker ${markerClass}" style="background:${markerBg};">${safeCallsign.substring(0,2).toUpperCase()}</div>`;
+                    
                     if (!markers[key]) {
                         markers[key] = L.marker(latLng, { icon: L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }) }).addTo(map);
-                        markers[key].bindPopup(`<strong>${sanitizeHtml(unit.callsign || key)}</strong>`);
+                        markers[key].bindPopup(`<strong>${safeCallsign}</strong><br>Status: ${statusLabelText}`);
                     } else {
                         markers[key].setLatLng(latLng);
+                        markers[key].setIcon(L.divIcon({ html: markerHtml, className: '', iconSize: [28, 28] }));
                     }
                 }
+
+                // Update Sidebar Roster Card
+                let card = document.getElementById(`unit_card_${key}`);
+                if (!card) {
+                    card = document.createElement("div");
+                    card.id = `unit_card_${key}`;
+                    card.setAttribute("data-key", key);
+                    unitListEl.appendChild(card);
+                }
+                unitListEl.appendChild(card);
+
+                let cardClass = "card-online", statusBadgeText = "● ONLINE", statusBadgeColor = "var(--color-online)";
+                if (isCasualty) { cardClass = "card-casualty"; statusBadgeText = "🚨 CASUALTY"; statusBadgeColor = "var(--color-distress)"; }
+                else if (isLiveRelay) { cardClass = "card-relay"; statusBadgeText = "📡 BLE RELAY"; statusBadgeColor = "var(--color-relay)"; }
+                else if (isGpsLost) { cardClass = "card-stale"; statusBadgeText = `⚠ GPS LOST · ${ageText}`; statusBadgeColor = "#ca8a04"; }
+                else if (isOffline) { cardClass = "card-offline"; statusBadgeText = "OFFLINE"; statusBadgeColor = "#64748b"; }
+
+                card.className = `unit-card ${cardClass}`;
+                card.onclick = () => focusCommando(key);
+
+                const safeName = sanitizeHtml(unit.callsign || key);
+                const safeGroup = sanitizeHtml(unit.group || 'N/A');
+                const headingDeg = Math.round(unit.heading || 0);
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#fff;">${safeName}</strong>
+                        <span style="font-size:0.75rem; font-weight:bold; color:${statusBadgeColor}">${statusBadgeText}</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+                        ACC: ±${unit.accuracy ? unit.accuracy.toFixed(1) : 0}m | HDG: ${headingDeg}° | GRP: ${safeGroup}
+                    </div>
+                `;
             });
 
             document.getElementById("onlineCount").innerText = onlineCount;
@@ -799,6 +864,14 @@
             document.getElementById("staleCount").innerText = staleCount;
             document.getElementById("totalUnitsBadge").innerText = `${visibleEntitiesCount} ELEMENTS`;
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
+        }
+
+        function focusCommando(unitKey) {
+            const unit = knownUnits[unitKey];
+            if (unit && typeof unit.lat === 'number' && typeof unit.lng === 'number') {
+                map.flyTo([unit.lat, unit.lng], 18, { animate: true, duration: 1.0 });
+                if (markers[unitKey]) markers[unitKey].openPopup();
+            }
         }
 
         function purgeDatabaseGhosts() {
