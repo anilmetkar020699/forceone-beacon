@@ -29,7 +29,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace, -apple-system, sans-serif; }
         body { background: var(--bg-dark); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-        /* Security Authorization Overlay */
+        /* Firebase Auth Login Overlay */
         #authOverlay {
             position: fixed; inset: 0; background: rgba(8, 12, 20, 0.98); 
             z-index: 9999; display: flex; align-items: center; justify-content: center;
@@ -37,7 +37,7 @@
         }
         .auth-card {
             background: #111827; border: 1px solid #334155; padding: 36px 30px; 
-            border-radius: 12px; width: 360px; max-width: 90vw; text-align: center; 
+            border-radius: 12px; width: 380px; max-width: 90vw; text-align: center; 
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.15);
         }
         
@@ -55,7 +55,7 @@
         }
 
         .auth-card input {
-            width: 100%; padding: 12px 14px; margin-bottom: 16px; background: #0f172a; 
+            width: 100%; padding: 12px 14px; margin-bottom: 14px; background: #0f172a; 
             border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 0.95rem; text-align: center;
             letter-spacing: 1px; outline: none; transition: 0.2s border;
         }
@@ -66,6 +66,7 @@
             cursor: pointer; color: #0a0e17; text-transform: uppercase; transition: 0.2s background;
         }
         .auth-card button:hover { background: #7dd3fc; }
+        .auth-card button:disabled { opacity: 0.6; cursor: not-allowed; }
 
         /* Header Operations Bar */
         header { 
@@ -136,11 +137,13 @@
             padding: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s;
         }
         .unit-card:hover { transform: translateX(-2px); }
+        
         .unit-card.card-online { border: 1px solid var(--color-online); border-left: 4px solid var(--color-online); background: #0f172a; }
         .unit-card.card-relay { border: 1px solid var(--color-relay); border-left: 4px solid var(--color-relay); background: rgba(245, 158, 11, 0.12); }
         .unit-card.card-casualty { border: 2px solid var(--color-distress); background: rgba(127, 29, 29, 0.35); }
         .unit-card.card-stale { border: 1px solid var(--color-gps-lost); background: rgba(30, 27, 75, 0.25); opacity: 0.85; }
         .unit-card.card-offline { border: 1px solid var(--color-offline); background: rgba(15, 23, 42, 0.35); opacity: 0.45; color: #64748b; }
+        .unit-card.card-squad { border-left: 5px solid #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.15); background: #0b1329 !important; }
 
         .btn-listen { width: 100%; margin-top: 8px; padding: 8px; font-size: 0.75rem; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; background: #dc2626; color: #fff; }
         .btn-listen.monitoring { background: var(--color-online); color: #fff; }
@@ -151,23 +154,33 @@
             white-space: nowrap; flex-shrink: 0;
         }
         .btn-tool.active { background: var(--accent-blue); color: #000; font-weight: bold; }
-        .btn-tool.btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
+        .btn-tool.btn-threat { border-color: #dc2626; color: #fca5a5; }
+        .btn-tool.btn-threat.active { background: #dc2626; color: #fff; font-weight: bold; }
+        .btn-tool.btn-ied { border-color: #d97706; color: #fde68a; }
+        .btn-tool.btn-ied.active { background: #d97706; color: #000; font-weight: bold; }
+        .btn-breach { border-color: #16a34a; color: #86efac; }
+        .btn-breach.active { background: #16a34a; color: #fff; font-weight: bold; }
+        .btn-merge { border-color: #38bdf8; color: #7dd3fc; font-weight: bold; }
+        .btn-merge.active { background: #0284c7; color: #fff; }
+        .btn-purge { border-color: #f59e0b; color: #fef08a; font-weight: bold; }
+        .btn-logout { background: #dc2626; border-color: #ef4444; font-weight: bold; }
 
         /* Tactical Markers */
         .commando-marker {
             width: 28px; height: 28px; border-radius: 50%; display: flex; 
             align-items: center; justify-content: center; font-size: 11px; 
             font-weight: 900; color: #fff; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            transition: transform 0.2s ease-out;
         }
 
         /* Modals */
-        #commsModal {
+        #hitMergeModal, #commsModal {
             display: none; position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); 
             z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(5px);
         }
         .merge-dialog {
             background: #111827; border: 2px solid #38bdf8; border-radius: 12px; 
-            width: 420px; max-width: 92vw; padding: 22px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9);
+            width: 480px; max-width: 94vw; padding: 22px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9);
         }
         .merge-dialog h3 {
             font-size: 1.05rem; color: #38bdf8; letter-spacing: 1.5px; 
@@ -196,13 +209,13 @@
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 
-    <!-- Remote Audio Player for Casualty Audio Intercept -->
     <audio id="remoteAudioPlayer" autoplay playsinline></audio>
 
-    <!-- Security Authorization Screen (Local Passcode - No Cloud Auth Errors) -->
+    <!-- Firebase Authentication Login Overlay (Previous Login restored) -->
     <div id="authOverlay">
         <div class="auth-card">
             <svg class="auth-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -213,8 +226,9 @@
             </svg>
             <div class="auth-welcome-title">WELCOME</div>
             <div class="auth-subtitle">COMMANDO TRACKING SYSTEM</div>
-            <input type="password" id="c2Password" placeholder="Enter Operations Passcode" onkeydown="if(event.key==='Enter') verifyAccess()">
-            <button id="loginBtn" onclick="verifyAccess()">ACCESS HQ</button>
+            <input type="email" id="c2Email" value="anilmetkar0206@gmail.com" placeholder="Operator Email" style="display:none;">
+            <input type="password" id="c2Password" placeholder="Enter Firebase Password" onkeydown="if(event.key==='Enter') loginWithFirebaseAuth()">
+            <button id="loginBtn" onclick="loginWithFirebaseAuth()">LOGIN</button>
         </div>
     </div>
 
@@ -239,12 +253,13 @@
             <button id="toggleRosterBtn" class="btn-tool active" onclick="toggleSidebar()">👁️ HIDE ROSTER</button>
             <button id="btnComms" class="btn-tool" onclick="openCommsModal()" style="background:#0369a1; color:#fff; border-color:#38bdf8;">✉️ SEND MESSAGE</button>
             <button id="toggleOfflineBtn" class="btn-tool" onclick="toggleOfflineFilter()">🟢 ONLINE ONLY: OFF</button>
+            <button id="purgeBtn" class="btn-tool btn-purge" onclick="purgeDatabaseGhosts()">🧹 PURGE GHOSTS</button>
             <button id="sirenMuteBtn" class="btn-tool" onclick="toggleSirenMute()">🔔 SIREN: ON</button>
-            <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOCK</button>
+            <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOGOUT</button>
         </div>
     </header>
 
-    <!-- Message Dispatch Modal with 1-Hour Expiry -->
+    <!-- Message Dispatch Modal with Targeted Recipient & 1-Hour TTL -->
     <div id="commsModal">
         <div class="merge-dialog" style="width:480px; max-width:94vw; border-color:#38bdf8; box-shadow:0 0 25px rgba(56,189,248,0.25);">
             <h3>
@@ -253,11 +268,38 @@
             </h3>
 
             <label for="commsScopeSelect">1. TARGET RECIPIENT</label>
-            <select id="commsScopeSelect">
+            <select id="commsScopeSelect" onchange="onCommsScopeChange()">
                 <option value="ALL">📢 BROADCAST TO ALL UNITS</option>
+                <option value="GROUP">👥 SPECIFIC GROUP (Alfa, Bravo, etc.)</option>
+                <option value="HIT">🎯 SPECIFIC HIT (Hit Squad)</option>
+                <option value="COMMANDO">👤 INDIVIDUAL COMMANDO</option>
             </select>
 
-            <label for="commsMessageInput">2. MESSAGE TEXT (Auto-wipes in 1 Hour)</label>
+            <div id="commsGroupRow" style="display:none;">
+                <label for="commsGroupSelect">SELECT GROUP</label>
+                <select id="commsGroupSelect" onchange="onCommsGroupChange()">
+                    <option value="Alfa">Alfa</option><option value="Bravo">Bravo</option><option value="Charlie" selected>Charlie</option><option value="Delta">Delta</option><option value="SOT">SOT</option><option value="Sniper">Sniper</option><option value="BD">BD</option>
+                </select>
+            </div>
+
+            <div id="commsHitRow" style="display:none;">
+                <label for="commsHitSelect">SELECT HIT ASSIGNMENT</label>
+                <select id="commsHitSelect" onchange="onCommsHitChange()"></select>
+            </div>
+
+            <div id="commsCommandoRow" style="display:none;">
+                <label for="commsCommandoSelect">SELECT INDIVIDUAL COMMANDO</label>
+                <select id="commsCommandoSelect"></select>
+            </div>
+
+            <label>2. QUICK MESSAGE PRESETS</label>
+            <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; margin-bottom:8px;">
+                <button type="button" class="btn-tool" onclick="setPresetOrder('HOLD POSITION & MAINTAIN COVER')" style="color:#38bdf8; border-color:#334155;">🛑 HOLD POSITION</button>
+                <button type="button" class="btn-tool btn-breach" onclick="setPresetOrder('COMMENCE BREACH ON SIGNAL')">🟢 COMMENCE BREACH</button>
+                <button type="button" class="btn-tool btn-ied" onclick="setPresetOrder('FALL BACK TO PERIMETER')">⚠️ FALL BACK</button>
+            </div>
+
+            <label for="commsMessageInput">3. MESSAGE TEXT (Auto-wipes in 1 Hour)</label>
             <textarea id="commsMessageInput" rows="3" placeholder="Type custom operational message..." style="width:100%; background:#0f172a; color:#fff; border:1px solid #334155; border-radius:6px; padding:10px; font-size:0.85rem; font-family:monospace; margin-bottom:10px; outline:none; resize:none;"></textarea>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
@@ -299,7 +341,7 @@
             </div>
             <div id="unitList" class="unit-list">
                 <div id="emptyRosterMsg" style="color:var(--text-muted); font-size:0.8rem; text-align:center; margin-top:20px;">
-                    Enter Operations Passcode to connect...
+                    Authenticating with Firebase...
                 </div>
             </div>
         </div>
@@ -318,6 +360,7 @@
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const C2_OPERATOR_EMAIL = "anilmetkar0206@gmail.com";
 
         // Initialize Map with Rotation Support Enabled
         const map = L.map('tacticalMap', { 
@@ -326,9 +369,19 @@
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Map Layers: Dark Tactical & Esri Satellite
+        const tacticalDarkLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19, className: 'dark-tiles', attribution: 'Tactical Grid'
         }).addTo(map);
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19, attribution: 'Esri Satellite'
+        });
+
+        L.control.layers({
+            "Dark Tactical Map": tacticalDarkLayer,
+            "Satellite Imagery": satelliteLayer
+        }, null, { position: 'topright' }).addTo(map);
 
         const markers = {}, knownUnits = {};
         let telemetryRef = null, isListening = false, hideOffline = false, latestCasualtyLatLng = null;
@@ -339,7 +392,6 @@
         let isSirenMuted = false, audioCtx = null, isSirenPlaying = false, activeSirenOsc = null, audioSourceNode = null;
         const activeCasualties = new Set();
 
-        // Enable AudioContext on first user click (browser policy requirement)
         document.addEventListener('click', () => {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -348,6 +400,21 @@
         function sanitizeHtml(str) {
             if (!str) return '';
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function getUnitGroupAndHit(unit, key) {
+            let group = unit.group || "", hit = unit.hit || "";
+            const callsign = (unit.callsign || key || "").toUpperCase();
+            if (!group) {
+                ["ALFA", "ALPHA", "BRAVO", "CHARLIE", "DELTA", "SOT", "SNIPER", "BD"].forEach(g => {
+                    if (callsign.includes(g)) group = (g === "ALPHA") ? "Alfa" : (g.charAt(0) + g.slice(1).toLowerCase());
+                });
+            }
+            if (!hit) {
+                const mHit = callsign.match(/HIT[- ]?(\d+)/i);
+                if (mHit) hit = `Hit ${mHit[1]}`;
+            }
+            return { group: group || "Unknown", hit: hit || "Unknown", canonicalKey: `${(group||"UNKNOWN").toUpperCase()}::${(hit||"UNKNOWN").toUpperCase().replace(/\s+/g,"")}` };
         }
 
         // --- MAP ROTATION & NORTH COMPASS ---
@@ -361,43 +428,133 @@
         function rotateMapRelative(delta) { if (typeof map.setBearing === 'function') { const cur = map.getBearing() || 0; map.setBearing(cur + delta); updateNorthCompass(cur + delta); } }
         function resetNorth() { if (typeof map.setBearing === 'function') { map.setBearing(0); updateNorthCompass(0); } }
 
-        // --- LOCAL PASSCODE VERIFICATION ---
-        function verifyAccess() {
-            const passcode = document.getElementById("c2Password").value;
-            if (!passcode) { alert("Please enter the operations passcode."); return; }
+        // --- FIREBASE AUTHENTICATION (PREVIOUS LOGIN) ---
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                document.getElementById("authOverlay").style.display = "none";
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                startListeningTelemetry();
+            } else {
+                document.getElementById("authOverlay").style.display = "flex";
+                if (telemetryRef) { telemetryRef.off(); telemetryRef = null; }
+                isListening = false;
+            }
+        });
 
-            document.getElementById("authOverlay").style.display = "none";
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+        async function loginWithFirebaseAuth() {
+            const password = document.getElementById("c2Password").value;
+            const loginBtn = document.getElementById("loginBtn");
+            if (!password) { alert("Please enter your Firebase password."); return; }
 
-            startListeningTelemetry();
+            loginBtn.innerText = "AUTHENTICATING...";
+            loginBtn.disabled = true;
+
+            try {
+                await firebase.auth().signInWithEmailAndPassword(C2_OPERATOR_EMAIL, password);
+                document.getElementById("c2Password").value = "";
+            } catch (err) {
+                alert("Auth Failed: " + err.message);
+                document.getElementById("c2Password").value = "";
+            } finally {
+                loginBtn.innerText = "LOGIN";
+                loginBtn.disabled = false;
+            }
         }
 
         function logoutC2() {
             if (telemetryRef) { telemetryRef.off(); telemetryRef = null; }
             isListening = false;
             stopAudioMonitoring();
-            document.getElementById("authOverlay").style.display = "flex";
-            document.getElementById("c2Password").value = "";
+            firebase.auth().signOut().then(() => location.reload());
         }
 
-        function openCommsModal() { document.getElementById("commsModal").style.display = "flex"; }
-        function closeCommsModal() { document.getElementById("commsModal").style.display = "none"; document.getElementById("commsDispatchStatus").innerText = ""; }
+        // --- TARGETED COMMS MODAL & DROPDOWNS ---
+        function openCommsModal() {
+            document.getElementById("commsModal").style.display = "flex";
+            onCommsScopeChange();
+        }
+        function closeCommsModal() {
+            document.getElementById("commsModal").style.display = "none";
+            document.getElementById("commsDispatchStatus").innerText = "";
+        }
 
-        // --- 1-HOUR TTL MESSAGE DISPATCH ---
+        function onCommsScopeChange() {
+            const scope = document.getElementById("commsScopeSelect").value;
+            document.getElementById("commsGroupRow").style.display = (scope === "ALL") ? "none" : "block";
+            document.getElementById("commsHitRow").style.display = (scope === "HIT" || scope === "COMMANDO") ? "block" : "none";
+            document.getElementById("commsCommandoRow").style.display = (scope === "COMMANDO") ? "block" : "none";
+            if (scope !== "ALL") onCommsGroupChange();
+        }
+
+        function onCommsGroupChange() {
+            const group = document.getElementById("commsGroupSelect").value, hitSelect = document.getElementById("commsHitSelect");
+            hitSelect.innerHTML = "";
+            if (["Alfa", "Bravo", "Charlie", "Delta"].includes(group)) for (let i = 1; i <= 8; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+            else if (group === "SOT") for (let i = 1; i <= 2; i++) hitSelect.add(new Option(`Hit ${i}`, `Hit ${i}`));
+            else if (group === "Sniper") ["India 1", "India 2", "India 3", "India 4"].forEach(s => hitSelect.add(new Option(s, s)));
+            else if (group === "BD") ["BD 1", "BD 2"].forEach(b => hitSelect.add(new Option(b, b)));
+            onCommsHitChange();
+        }
+
+        function onCommsHitChange() {
+            if (document.getElementById("commsScopeSelect").value === "COMMANDO") {
+                populateCommandoDropdown();
+            }
+        }
+
+        function populateCommandoDropdown() {
+            const commandoSelect = document.getElementById("commsCommandoSelect");
+            commandoSelect.innerHTML = "";
+            const group = document.getElementById("commsGroupSelect").value;
+            const hit = document.getElementById("commsHitSelect").value;
+            const cleanG = group.toUpperCase(), cleanH = hit.toUpperCase().replace(/\s+/g,"");
+            
+            const seen = new Set();
+            Object.keys(knownUnits).forEach(k => {
+                const u = knownUnits[k], info = getUnitGroupAndHit(u, k);
+                if (info.canonicalKey === `${cleanG}::${cleanH}`) {
+                    const callsign = (u.callsign || k).toUpperCase();
+                    if (!seen.has(callsign)) {
+                        seen.add(callsign);
+                        commandoSelect.add(new Option(`● ACTIVE: ${callsign}`, callsign));
+                    }
+                }
+            });
+
+            for (let i = 1; i <= 6; i++) {
+                const std = `${cleanG}-${cleanH}-CDO-${i}`.toUpperCase();
+                if (!seen.has(std)) {
+                    seen.add(std);
+                    commandoSelect.add(new Option(`${group} - ${hit} - Position ${i}`, std));
+                }
+            }
+        }
+
+        function setPresetOrder(text) { document.getElementById("commsMessageInput").value = text; }
+
+        // --- 1-HOUR TTL MESSAGE DISPATCH & AUTO-WIPE ---
         function dispatchTacticalOrder() {
             const text = document.getElementById("commsMessageInput").value.trim();
             if (!text) { alert("Please enter message text."); return; }
+
+            const scope = document.getElementById("commsScopeSelect").value;
+            const group = document.getElementById("commsGroupSelect").value;
+            const hit = document.getElementById("commsHitSelect").value;
+            const targetCallsign = document.getElementById("commsCommandoSelect").value;
 
             const oneHourInMillis = 60 * 60 * 1000; // Exactly 1 hour
 
             const payload = {
                 orderId: "MSG_" + Date.now(),
-                scope: "ALL",
+                scope: scope,
+                group: (scope !== "ALL") ? group : "ALL",
+                hit: (scope === "HIT" || scope === "COMMANDO") ? hit : "ALL",
+                targetCallsign: (scope === "COMMANDO") ? targetCallsign : "ALL",
                 message: text,
                 sender: "HQ COMMAND",
                 timestamp: Date.now(),
-                expiresAt: Date.now() + oneHourInMillis
+                expiresAt: Date.now() + oneHourInMillis // 1-Hour TTL
             };
 
             const statusEl = document.getElementById("commsDispatchStatus");
@@ -462,7 +619,6 @@
 
                 gain.gain.setValueAtTime(0.25, t);
                 gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
-
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start(t);
@@ -616,7 +772,6 @@
                     }
                 }
 
-                // Roster card with Speaker / Audio Button
                 const card = document.createElement("div");
                 card.className = `unit-card ${isCasualty ? 'card-casualty' : 'card-online'}`;
                 card.onclick = () => { if (unit.lat && unit.lng) map.flyTo([unit.lat, unit.lng], 18); };
@@ -629,7 +784,7 @@
                         <button id="audioBtn_${key}" class="btn-listen ${currentListeningUnit === key ? 'monitoring' : ''}" 
                                 onclick="event.stopPropagation(); toggleAudioListen('${key}')">
                             ${currentListeningUnit === key ? '🔊 SPEAKER: ON (MUTE)' : '🎙️ TURN SPEAKER ON (LISTEN)'}
-                        .button>
+                        </button>
                     ` : ''}
                 `;
                 unitListEl.appendChild(card);
@@ -639,6 +794,16 @@
             document.getElementById("casualtyCount").innerText = casualtyCount;
             document.getElementById("totalUnitsBadge").innerText = `${visibleEntitiesCount} ELEMENTS`;
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
+        }
+
+        function purgeDatabaseGhosts() {
+            database.ref("commandos").get().then(snap => {
+                const all = snap.val() || {};
+                Object.keys(all).forEach(k => {
+                    if (Date.now() - (all[k].lastUpdated || 0) > 45000) database.ref("commandos/" + k).remove();
+                });
+                alert("Database ghost purge complete.");
+            });
         }
 
         function focusLatestCasualty() { if (latestCasualtyLatLng) map.flyTo(latestCasualtyLatLng, 18); }
