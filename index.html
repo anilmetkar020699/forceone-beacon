@@ -628,17 +628,43 @@
             }
         );
 
+        // Road/transportation reference overlay. This adds road network labels
+        // and selected road details where Esri has coverage. It is a transparent
+        // reference layer, not another opaque basemap.
+        const satelliteRoadsLayer = L.tileLayer(
+            'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 1,
+                maxZoom: 22,
+                maxNativeZoom: 17,
+                pane: 'overlayPane',
+                keepBuffer: 4,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                attribution: 'Esri World Transportation'
+            }
+        );
+
         // Log failures for diagnosis; the rest of the dashboard is unchanged.
         satelliteLayer.on('tileerror', function (event) {
             console.warn('Satellite imagery tile failed to load:', event.tile && event.tile.src);
         });
         satelliteLabelsLayer.on('tileerror', function (event) {
-            console.warn('Satellite label tile failed to load:', event.tile && event.tile.src);
+            console.warn('Satellite place-label tile failed to load:', event.tile && event.tile.src);
+        });
+        satelliteRoadsLayer.on('tileerror', function (event) {
+            console.warn('Satellite road-reference tile failed to load:', event.tile && event.tile.src);
         });
 
-        // Treat imagery + transparent labels as one base-map option so the
-        // labels switch on/off with satellite mode and do not cover tactical mode.
-        const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer]);
+        // Keep satellite imagery and both transparent reference overlays in a
+        // single switchable option. Native imagery/reference detail is provider-
+        // limited; maxNativeZoom 17 avoids requesting unsupported higher zoom
+        // tiles, but the imagery will be enlarged (softer) above that level.
+        const satelliteHybridLayer = L.layerGroup([
+            satelliteLayer,
+            satelliteLabelsLayer,
+            satelliteRoadsLayer
+        ]);
 
         L.control.layers({
             "Dark Tactical Map": tacticalDarkLayer,
