@@ -592,7 +592,9 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Satellite imagery with high interactive zoom.
+        // Satellite imagery layer with maxNativeZoom: 19.
+        // This prevents "Map data not yet available" gray tiles when zooming past zoom 19
+        // by scaling up level 19 tiles while still permitting deep zoom (up to 22).
         const satelliteLayer = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             {
