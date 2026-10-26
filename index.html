@@ -592,26 +592,47 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Satellite layer: keep native tile requests at the actual zoom level.
+        // Satellite imagery with high interactive zoom.
         const satelliteLayer = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             {
                 minZoom: 1,
                 maxZoom: 22,
-                keepBuffer: 3,
+                maxNativeZoom: 19,
+                keepBuffer: 4,
                 updateWhenZooming: false,
                 updateWhenIdle: true,
-                attribution: 'Esri Satellite'
+                attribution: 'Esri World Imagery'
+            }
+        );
+
+        // Transparent geographic labels overlay
+        const satelliteLabelsLayer = L.tileLayer(
+            'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 1,
+                maxZoom: 22,
+                maxNativeZoom: 19,
+                pane: 'overlayPane',
+                keepBuffer: 4,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                attribution: 'Esri Reference Labels'
             }
         );
 
         satelliteLayer.on('tileerror', function (event) {
-            console.warn('Satellite tile failed to load:', event.tile && event.tile.src);
+            console.warn('Satellite imagery tile failed to load:', event.tile && event.tile.src);
         });
+        satelliteLabelsLayer.on('tileerror', function (event) {
+            console.warn('Satellite label tile failed to load:', event.tile && event.tile.src);
+        });
+
+        const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer]);
 
         L.control.layers({
             "Dark Tactical Map": tacticalDarkLayer,
-            "Satellite Imagery": satelliteLayer
+            "Satellite Imagery + Labels": satelliteHybridLayer
         }, null, { position: 'topright' }).addTo(map);
 
         // --- 3. STORAGE & TRACKING STATE ---
