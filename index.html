@@ -578,6 +578,8 @@
         // --- 2. MAP INITIALIZATION ---
         const map = L.map('tacticalMap', { 
             zoomControl: false,
+            maxZoom: 22,
+            minZoom: 3,
             rotate: true,
             bearing: 0,
             touchRotate: true,
@@ -592,14 +594,15 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Google Satellite & Hybrid Imagery Layer (Supports deep zoom up to 22 globally without gray tiles)
+        // Google Satellite & Hybrid Imagery Layer (Allows deep pinch-zoom up to 22 with seamless upscaling like Google Maps)
         const satelliteLayer = L.tileLayer(
-            'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
             {
                 minZoom: 1,
                 maxZoom: 22,
-                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-                keepBuffer: 4,
+                maxNativeZoom: 20,
+                detectRetina: true,
+                keepBuffer: 8,
                 updateWhenZooming: false,
                 updateWhenIdle: true,
                 attribution: 'Google Satellite'
@@ -607,13 +610,14 @@
         );
 
         const satelliteLabelsLayer = L.tileLayer(
-            'https://{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}',
+            'https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}',
             {
                 minZoom: 1,
                 maxZoom: 22,
-                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                maxNativeZoom: 20,
+                detectRetina: true,
                 pane: 'overlayPane',
-                keepBuffer: 4,
+                keepBuffer: 8,
                 updateWhenZooming: false,
                 updateWhenIdle: true,
                 attribution: 'Google Labels'
