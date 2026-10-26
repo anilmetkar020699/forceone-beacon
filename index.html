@@ -513,11 +513,8 @@
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
                 <span id="commsDispatchStatus" style="font-size:0.75rem; color:#4ade80; font-weight:bold;"></span>
-                
-                <!-- Action Buttons: Send & Clear Side-by-Side -->
                 <div style="display:flex; gap:8px;">
-                    <button type="button" onclick="closeCommsModal()" style="background:#334155; color:#fff; border:none; padding:9px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.8rem;">CANCEL</button>
-                    <button type="button" onclick="clearPendingDirective()" style="background:#b91c1c; color:#fff; border:1px solid #ef4444; font-weight:bold; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem;" title="Clear pending directive from database">🗑️ CLEAR</button>
+                    <button type="button" onclick="closeCommsModal()" style="background:#334155; color:#fff; border:none; padding:9px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.8rem;">CANCEL</button>
                     <button type="button" onclick="dispatchTacticalOrder()" style="background:#0284c7; color:#fff; border:1px solid #38bdf8; font-weight:bold; padding:9px 16px; border-radius:6px; cursor:pointer; font-size:0.8rem; letter-spacing:1px;">SEND NOW 📤</button>
                 </div>
             </div>
@@ -592,49 +589,14 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Satellite imagery layer with maxNativeZoom: 19.
-        // This prevents "Map data not yet available" gray tiles when zooming past zoom 19
-        // by scaling up level 19 tiles while still permitting deep zoom (up to 22).
-        const satelliteLayer = L.tileLayer(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            {
-                minZoom: 1,
-                maxZoom: 22,
-                maxNativeZoom: 19,
-                keepBuffer: 4,
-                updateWhenZooming: false,
-                updateWhenIdle: true,
-                attribution: 'Esri World Imagery'
-            }
-        );
-
-        // Transparent geographic labels overlay
-        const satelliteLabelsLayer = L.tileLayer(
-            'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-            {
-                minZoom: 1,
-                maxZoom: 22,
-                maxNativeZoom: 19,
-                pane: 'overlayPane',
-                keepBuffer: 4,
-                updateWhenZooming: false,
-                updateWhenIdle: true,
-                attribution: 'Esri Reference Labels'
-            }
-        );
-
-        satelliteLayer.on('tileerror', function (event) {
-            console.warn('Satellite imagery tile failed to load:', event.tile && event.tile.src);
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Esri Satellite'
         });
-        satelliteLabelsLayer.on('tileerror', function (event) {
-            console.warn('Satellite label tile failed to load:', event.tile && event.tile.src);
-        });
-
-        const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer]);
 
         L.control.layers({
             "Dark Tactical Map": tacticalDarkLayer,
-            "Satellite Imagery + Labels": satelliteHybridLayer
+            "Satellite Imagery": satelliteLayer
         }, null, { position: 'topright' }).addTo(map);
 
         // --- 3. STORAGE & TRACKING STATE ---
@@ -649,9 +611,9 @@
         let latestCasualtyLatLng = null;
 
         // HIT MERGE / SQUAD FORMATION STATE
-        const mergedHits = new Set();
-        const squadMarkers = {};      
-        const squadCircles = {};      
+        const mergedHits = new Set(); // Stores canonical keys like "CHARLIE::HIT3", "ALFA::HIT1"
+        const squadMarkers = {};      // Visual centroid squad markers
+        const squadCircles = {};      // Perimeter / spread footprint circles
 
         let telemetryRef = null;
         let isListening = false;
@@ -699,6 +661,7 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // Canonical Key Normalization with COMMANDO == CDO standardization
         function getCanonicalKey(str) {
             if (!str) return '';
             let s = String(str).toLowerCase();
@@ -706,6 +669,7 @@
             return s.replace(/[^a-z0-9]/g, '');
         }
 
+        // Check if two tactical IDs are duplicate representations of the same commando
         function areDuplicateCallsigns(idA, idB) {
             const normA = getCanonicalKey(idA);
             const normB = getCanonicalKey(idB);
@@ -719,6 +683,10 @@
             return false;
         }
 
+        /**
+         * Identifies the Group and Hit for any commando from telemetry or callsign.
+         * Returns { group, hit, canonicalHitKey, cdoNum }
+         */
         function getUnitGroupAndHit(unit, key) {
             let group = unit.group || "";
             let hit = unit.hit || "";
@@ -992,6 +960,7 @@
             }
         }
 
+        // Populates target commandos with strict zero duplicate guarantee
         function populateCommandoDropdown() {
             const commandoSelect = document.getElementById("commsCommandoSelect");
             commandoSelect.innerHTML = "";
@@ -1003,6 +972,7 @@
 
             const seenCallsigns = new Set();
 
+            // 1. Detect active commandos on the grid matching group & hit
             Object.keys(knownUnits).forEach(k => {
                 const u = knownUnits[k];
                 const info = getUnitGroupAndHit(u, k);
@@ -1019,6 +989,7 @@
                 }
             });
 
+            // 2. Add standard positions (1 to 6 for standard hits, or 1 to 4 for Sniper/BD/SOT)
             const hitPrefix = cleanHit;
             const maxPositions = (group === "Sniper" || group === "BD") ? 4 : 6;
             for (let i = 1; i <= maxPositions; i++) {
@@ -1037,6 +1008,7 @@
             document.getElementById("commsMessageInput").value = text;
         }
 
+        // Overwrites the single /active_order slot directly (0 KB database accumulation)
         function dispatchTacticalOrder() {
             const text = document.getElementById("commsMessageInput").value.trim();
             if (!text) {
@@ -1051,7 +1023,7 @@
 
             const payload = {
                 orderId: "MSG_" + Date.now(),
-                scope: scope,
+                scope: scope, // "ALL", "GROUP", "HIT", or "COMMANDO"
                 group: (scope !== "ALL") ? group : "ALL",
                 hit: (scope === "HIT" || scope === "COMMANDO") ? hit : "ALL",
                 targetCallsign: (scope === "COMMANDO") ? targetCallsign : "ALL",
@@ -1064,6 +1036,7 @@
             statusEl.innerText = "TRANSMITTING...";
             statusEl.style.color = "#38bdf8";
 
+            // Overwrites /active_order directly (no .push(), 0 KB storage accumulation, supports sequential messaging)
             database.ref("active_order").set(payload, (err) => {
                 if (err) {
                     statusEl.innerText = "SEND FAILED";
@@ -1079,26 +1052,6 @@
                     }, 1000);
                 }
             });
-        }
-
-        function clearPendingDirective() {
-            const statusEl = document.getElementById("commsDispatchStatus");
-            statusEl.innerText = "CLEARING...";
-            statusEl.style.color = "#f59e0b";
-
-            database.ref("active_order").remove()
-                .then(() => {
-                    statusEl.innerText = "✓ CLEARED";
-                    statusEl.style.color = "#4ade80";
-                    setTimeout(() => {
-                        statusEl.innerText = "";
-                    }, 1200);
-                })
-                .catch((error) => {
-                    statusEl.innerText = "CLEAR FAILED";
-                    statusEl.style.color = "#ef4444";
-                    console.error("Error clearing directive:", error);
-                });
         }
 
         // --- 7. TOGGLE ROSTER & FILTER CONTROLS ---
@@ -1278,6 +1231,7 @@
             const now = Date.now();
             const unitListEl = document.getElementById("unitList");
 
+            // --- ADVANCED DEDUPLICATION & AUTO-PURGING ENGINE ---
             const allKeys = Object.keys(data);
             const obsoleteKeysToDelete = new Set();
 
@@ -1352,6 +1306,7 @@
                 }
             });
 
+            // --- PARTITION INTO MERGED SQUADS VS INDEPENDENT COMMANDOS ---
             const squadGroups = {};       
             const independentKeys = [];   
 
@@ -1395,6 +1350,7 @@
             let staleCount = 0;
             let visibleEntitiesCount = 0;
 
+            // --- 1. RENDER MERGED SQUADS (AVERAGE CENTROID GPS) ---
             Object.keys(squadGroups).forEach(canonicalKey => {
                 const members = squadGroups[canonicalKey];
                 if (members.length === 0) return;
@@ -1585,6 +1541,7 @@
                 `;
             });
 
+            // --- 2. RENDER INDEPENDENT COMMANDOS ---
             independentKeys.sort((a, b) => {
                 const uA = data[a];
                 const uB = data[b];
@@ -1662,6 +1619,7 @@
                 const ageSec = Math.max(0, Math.round(ageMs / 1000));
                 const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
 
+                // Map Markers
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
                     
@@ -1720,6 +1678,7 @@
                         markers[key].getPopup().setContent(popupHtml);
                     }
 
+                    // Accuracy Circle
                     if (isLiveGps || isLiveRelay) {
                         const circleColor = isCasualty ? '#dc2626' : (isLiveRelay ? '#f59e0b' : '#15803d');
                         const circleOpacity = isLiveRelay ? 0.18 : 0.12;
@@ -1750,6 +1709,7 @@
                         }
                     }
 
+                    // Dynamic Tether Line
                     if (isLiveRelay && relaySource && (data[relaySource] || lastPositions[relaySource])) {
                         const parentUnit = data[relaySource];
                         const parentLatLng = (parentUnit && parentUnit.lat && parentUnit.lng) 
@@ -1776,6 +1736,7 @@
                         }
                     }
 
+                    // Path Segments
                     if (!unitSegments[key]) unitSegments[key] = [];
 
                     if (lastPositions[key]) {
@@ -1805,6 +1766,7 @@
                     }
                 }
 
+                // In-place individual roster card
                 let card = document.getElementById(`unit_card_${key}`);
                 if (!card) {
                     card = document.createElement("div");
