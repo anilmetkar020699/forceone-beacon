@@ -592,9 +592,21 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19,
-            attribution: 'Esri Satellite'
+        // Satellite layer: keep native tile requests at the actual zoom level.
+        const satelliteLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 1,
+                maxZoom: 22,
+                keepBuffer: 3,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                attribution: 'Esri Satellite'
+            }
+        );
+
+        satelliteLayer.on('tileerror', function (event) {
+            console.warn('Satellite tile failed to load:', event.tile && event.tile.src);
         });
 
         L.control.layers({
@@ -614,9 +626,9 @@
         let latestCasualtyLatLng = null;
 
         // HIT MERGE / SQUAD FORMATION STATE
-        const mergedHits = new Set(); // Stores canonical keys like "CHARLIE::HIT3", "ALFA::HIT1"
-        const squadMarkers = {};      // Visual centroid squad markers
-        const squadCircles = {};      // Perimeter / spread footprint circles
+        const mergedHits = new Set();
+        const squadMarkers = {};      
+        const squadCircles = {};      
 
         let telemetryRef = null;
         let isListening = false;
@@ -664,7 +676,6 @@
                 .replace(/'/g, '&#39;');
         }
 
-        // Canonical Key Normalization with COMMANDO == CDO standardization
         function getCanonicalKey(str) {
             if (!str) return '';
             let s = String(str).toLowerCase();
@@ -672,7 +683,6 @@
             return s.replace(/[^a-z0-9]/g, '');
         }
 
-        // Check if two tactical IDs are duplicate representations of the same commando
         function areDuplicateCallsigns(idA, idB) {
             const normA = getCanonicalKey(idA);
             const normB = getCanonicalKey(idB);
@@ -686,10 +696,6 @@
             return false;
         }
 
-        /**
-         * Identifies the Group and Hit for any commando from telemetry or callsign.
-         * Returns { group, hit, canonicalHitKey, cdoNum }
-         */
         function getUnitGroupAndHit(unit, key) {
             let group = unit.group || "";
             let hit = unit.hit || "";
@@ -963,7 +969,6 @@
             }
         }
 
-        // Populates target commandos with strict zero duplicate guarantee
         function populateCommandoDropdown() {
             const commandoSelect = document.getElementById("commsCommandoSelect");
             commandoSelect.innerHTML = "";
@@ -975,7 +980,6 @@
 
             const seenCallsigns = new Set();
 
-            // 1. Detect active commandos on the grid matching group & hit
             Object.keys(knownUnits).forEach(k => {
                 const u = knownUnits[k];
                 const info = getUnitGroupAndHit(u, k);
@@ -992,7 +996,6 @@
                 }
             });
 
-            // 2. Add standard positions (1 to 6 for standard hits, or 1 to 4 for Sniper/BD/SOT)
             const hitPrefix = cleanHit;
             const maxPositions = (group === "Sniper" || group === "BD") ? 4 : 6;
             for (let i = 1; i <= maxPositions; i++) {
@@ -1011,7 +1014,6 @@
             document.getElementById("commsMessageInput").value = text;
         }
 
-        // Overwrites the single /active_order slot directly (0 KB database accumulation)
         function dispatchTacticalOrder() {
             const text = document.getElementById("commsMessageInput").value.trim();
             if (!text) {
@@ -1026,7 +1028,7 @@
 
             const payload = {
                 orderId: "MSG_" + Date.now(),
-                scope: scope, // "ALL", "GROUP", "HIT", or "COMMANDO"
+                scope: scope,
                 group: (scope !== "ALL") ? group : "ALL",
                 hit: (scope === "HIT" || scope === "COMMANDO") ? hit : "ALL",
                 targetCallsign: (scope === "COMMANDO") ? targetCallsign : "ALL",
@@ -1056,7 +1058,6 @@
             });
         }
 
-        // Instantly clears pending/active orders from Firebase storage
         function clearPendingDirective() {
             const statusEl = document.getElementById("commsDispatchStatus");
             statusEl.innerText = "CLEARING...";
@@ -1254,7 +1255,6 @@
             const now = Date.now();
             const unitListEl = document.getElementById("unitList");
 
-            // --- ADVANCED DEDUPLICATION & AUTO-PURGING ENGINE ---
             const allKeys = Object.keys(data);
             const obsoleteKeysToDelete = new Set();
 
@@ -1329,7 +1329,6 @@
                 }
             });
 
-            // --- PARTITION INTO MERGED SQUADS VS INDEPENDENT COMMANDOS ---
             const squadGroups = {};       
             const independentKeys = [];   
 
@@ -1373,7 +1372,6 @@
             let staleCount = 0;
             let visibleEntitiesCount = 0;
 
-            // --- 1. RENDER MERGED SQUADS (AVERAGE CENTROID GPS) ---
             Object.keys(squadGroups).forEach(canonicalKey => {
                 const members = squadGroups[canonicalKey];
                 if (members.length === 0) return;
@@ -1564,7 +1562,6 @@
                 `;
             });
 
-            // --- 2. RENDER INDEPENDENT COMMANDOS ---
             independentKeys.sort((a, b) => {
                 const uA = data[a];
                 const uB = data[b];
@@ -1642,7 +1639,6 @@
                 const ageSec = Math.max(0, Math.round(ageMs / 1000));
                 const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
 
-                // Map Markers
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
                     
@@ -1701,7 +1697,6 @@
                         markers[key].getPopup().setContent(popupHtml);
                     }
 
-                    // Accuracy Circle
                     if (isLiveGps || isLiveRelay) {
                         const circleColor = isCasualty ? '#dc2626' : (isLiveRelay ? '#f59e0b' : '#15803d');
                         const circleOpacity = isLiveRelay ? 0.18 : 0.12;
@@ -1732,7 +1727,6 @@
                         }
                     }
 
-                    // Dynamic Tether Line
                     if (isLiveRelay && relaySource && (data[relaySource] || lastPositions[relaySource])) {
                         const parentUnit = data[relaySource];
                         const parentLatLng = (parentUnit && parentUnit.lat && parentUnit.lng) 
@@ -1759,7 +1753,6 @@
                         }
                     }
 
-                    // Path Segments
                     if (!unitSegments[key]) unitSegments[key] = [];
 
                     if (lastPositions[key]) {
@@ -1789,7 +1782,6 @@
                     }
                 }
 
-                // In-place individual roster card
                 let card = document.getElementById(`unit_card_${key}`);
                 if (!card) {
                     card = document.createElement("div");
