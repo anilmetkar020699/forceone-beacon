@@ -587,32 +587,51 @@
         
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Dark Tactical Map (OpenStreetMap with high-contrast tactical dark CSS filter)
         const tacticalDarkLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 22,
-            maxNativeZoom: 19,
+            maxZoom: 19,
             className: 'dark-tiles',
             attribution: 'Tactical Grid'
-        });
-
-        // Google Maps Hybrid (Crisp Satellite Imagery + Sharp Road & Building Names) - Default active layer
-        const googleHybridLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-            maxZoom: 22,
-            maxNativeZoom: 20,
-            attribution: 'Google Maps Hybrid'
         }).addTo(map);
 
-        // Google Maps Roadmap (Clear Street & Building Names)
-        const googleRoadLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-            maxZoom: 22,
-            maxNativeZoom: 20,
-            attribution: 'Google Maps Roadmap'
+        const satelliteLayer = L.tileLayer(
+            'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 1,
+                maxZoom: 22,
+                maxNativeZoom: 17,
+                keepBuffer: 4,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                attribution: 'Esri World Imagery'
+            }
+        );
+
+        const satelliteLabelsLayer = L.tileLayer(
+            'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+            {
+                minZoom: 1,
+                maxZoom: 22,
+                maxNativeZoom: 17,
+                pane: 'overlayPane',
+                keepBuffer: 4,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                attribution: 'Esri Reference Labels'
+            }
+        );
+
+        satelliteLayer.on('tileerror', function (event) {
+            console.warn('Satellite imagery tile failed to load:', event.tile && event.tile.src);
+        });
+        satelliteLabelsLayer.on('tileerror', function (event) {
+            console.warn('Satellite label tile failed to load:', event.tile && event.tile.src);
         });
 
+        const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer]);
+
         L.control.layers({
-            "Google Hybrid (Satellite + Roads/Names)": googleHybridLayer,
-            "Google Roadmap (Streets & Buildings)": googleRoadLayer,
-            "Dark Tactical Map": tacticalDarkLayer
+            "Dark Tactical Map": tacticalDarkLayer,
+            "Satellite Imagery + Labels": satelliteHybridLayer
         }, null, { position: 'topright' }).addTo(map);
 
         // --- 3. STORAGE & TRACKING STATE ---
@@ -626,10 +645,9 @@
         const situationMarkers = []; 
         let latestCasualtyLatLng = null;
 
-        // HIT MERGE / SQUAD FORMATION STATE
-        const mergedHits = new Set(); // Stores canonical keys like "CHARLIE::HIT3", "ALFA::HIT1"
-        const squadMarkers = {};      // Visual centroid squad markers
-        const squadCircles = {};      // Perimeter / spread footprint circles
+        const mergedHits = new Set();
+        const squadMarkers = {};      
+        const squadCircles = {};      
 
         let telemetryRef = null;
         let isListening = false;
@@ -640,7 +658,6 @@
         const STALE_MS = 30000;          
         const GHOST_PURGE_MS = 120000;   
 
-        // WebRTC & Audio Settings
         const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
         let activePeerConnection = null;
         let currentListeningUnit = null;
@@ -677,7 +694,6 @@
                 .replace(/'/g, '&#39;');
         }
 
-        // Canonical Key Normalization with COMMANDO == CDO standardization
         function getCanonicalKey(str) {
             if (!str) return '';
             let s = String(str).toLowerCase();
@@ -685,7 +701,6 @@
             return s.replace(/[^a-z0-9]/g, '');
         }
 
-        // Check if two tactical IDs are duplicate representations of the same commando
         function areDuplicateCallsigns(idA, idB) {
             const normA = getCanonicalKey(idA);
             const normB = getCanonicalKey(idB);
@@ -699,10 +714,6 @@
             return false;
         }
 
-        /**
-         * Identifies the Group and Hit for any commando from telemetry or callsign.
-         * Returns { group, hit, canonicalHitKey, cdoNum }
-         */
         function getUnitGroupAndHit(unit, key) {
             let group = unit.group || "";
             let hit = unit.hit || "";
@@ -745,7 +756,6 @@
             };
         }
 
-        // --- 4. MAP ROTATION & NORTH ARROW ENGINE ---
         function updateNorthCompass(deg) {
             const normalized = ((Math.round(deg) % 360) + 360) % 360;
             const needle = document.getElementById("northNeedle");
@@ -785,7 +795,6 @@
             }
         }
 
-        // --- 5. HIT MERGE / SQUAD FORMATION CONTROLS ---
         function openHitMergeModal() {
             document.getElementById("hitMergeModal").style.display = "flex";
             onModalGroupChange();
@@ -929,7 +938,6 @@
             });
         }
 
-        // --- 6. TACTICAL ORDER & MESSAGE DISPATCH CONTROLS ---
         function openCommsModal() {
             document.getElementById("commsModal").style.display = "flex";
             onCommsScopeChange();
@@ -976,7 +984,6 @@
             }
         }
 
-        // Populates target commandos with strict zero duplicate guarantee
         function populateCommandoDropdown() {
             const commandoSelect = document.getElementById("commsCommandoSelect");
             commandoSelect.innerHTML = "";
@@ -988,7 +995,6 @@
 
             const seenCallsigns = new Set();
 
-            // 1. Detect active commandos on the grid matching group & hit
             Object.keys(knownUnits).forEach(k => {
                 const u = knownUnits[k];
                 const info = getUnitGroupAndHit(u, k);
@@ -1005,7 +1011,6 @@
                 }
             });
 
-            // 2. Add standard positions (1 to 6 for standard hits, or 1 to 4 for Sniper/BD/SOT)
             const hitPrefix = cleanHit;
             const maxPositions = (group === "Sniper" || group === "BD") ? 4 : 6;
             for (let i = 1; i <= maxPositions; i++) {
@@ -1024,7 +1029,6 @@
             document.getElementById("commsMessageInput").value = text;
         }
 
-        // Overwrites the single /active_order slot directly (0 KB database accumulation)
         function dispatchTacticalOrder() {
             const text = document.getElementById("commsMessageInput").value.trim();
             if (!text) {
@@ -1039,7 +1043,7 @@
 
             const payload = {
                 orderId: "MSG_" + Date.now(),
-                scope: scope, // "ALL", "GROUP", "HIT", or "COMMANDO"
+                scope: scope,
                 group: (scope !== "ALL") ? group : "ALL",
                 hit: (scope === "HIT" || scope === "COMMANDO") ? hit : "ALL",
                 targetCallsign: (scope === "COMMANDO") ? targetCallsign : "ALL",
@@ -1069,7 +1073,6 @@
             });
         }
 
-        // Instantly clears pending/active orders from Firebase storage
         function clearPendingDirective() {
             const statusEl = document.getElementById("commsDispatchStatus");
             statusEl.innerText = "CLEARING...";
@@ -1090,7 +1093,6 @@
                 });
         }
 
-        // --- 7. TOGGLE ROSTER & FILTER CONTROLS ---
         function toggleSidebar() {
             const sidebar = document.getElementById("sidebarPanel");
             const btn = document.getElementById("toggleRosterBtn");
@@ -1119,7 +1121,6 @@
             renderTelemetry();
         }
 
-        // --- 8. AUTHENTICATION & SESSION MANAGEMENT ---
         firebase.auth().onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById("authOverlay").style.display = "none";
@@ -1201,7 +1202,6 @@
             });
         }
 
-        // --- 9. TELEMETRY LISTENER & MAP ENGINE ---
         function startListeningTelemetry() {
             if (isListening) return;
             isListening = true;
@@ -1267,7 +1267,6 @@
             const now = Date.now();
             const unitListEl = document.getElementById("unitList");
 
-            // --- ADVANCED DEDUPLICATION & AUTO-PURGING ENGINE ---
             const allKeys = Object.keys(data);
             const obsoleteKeysToDelete = new Set();
 
@@ -1342,7 +1341,6 @@
                 }
             });
 
-            // --- PARTITION INTO MERGED SQUADS VS INDEPENDENT COMMANDOS ---
             const squadGroups = {};       
             const independentKeys = [];   
 
@@ -1386,7 +1384,6 @@
             let staleCount = 0;
             let visibleEntitiesCount = 0;
 
-            // --- 1. RENDER MERGED SQUADS (AVERAGE CENTROID GPS) ---
             Object.keys(squadGroups).forEach(canonicalKey => {
                 const members = squadGroups[canonicalKey];
                 if (members.length === 0) return;
@@ -1577,7 +1574,6 @@
                 `;
             });
 
-            // --- 2. RENDER INDEPENDENT COMMANDOS ---
             independentKeys.sort((a, b) => {
                 const uA = data[a];
                 const uB = data[b];
@@ -1655,7 +1651,6 @@
                 const ageSec = Math.max(0, Math.round(ageMs / 1000));
                 const ageText = ageSec < 60 ? `${ageSec}s` : `${Math.floor(ageSec / 60)}m`;
 
-                // Map Markers
                 if (unit.lat && unit.lng) {
                     const latLng = [unit.lat, unit.lng];
                     
@@ -1714,7 +1709,6 @@
                         markers[key].getPopup().setContent(popupHtml);
                     }
 
-                    // Accuracy Circle
                     if (isLiveGps || isLiveRelay) {
                         const circleColor = isCasualty ? '#dc2626' : (isLiveRelay ? '#f59e0b' : '#15803d');
                         const circleOpacity = isLiveRelay ? 0.18 : 0.12;
@@ -1745,7 +1739,6 @@
                         }
                     }
 
-                    // Dynamic Tether Line
                     if (isLiveRelay && relaySource && (data[relaySource] || lastPositions[relaySource])) {
                         const parentUnit = data[relaySource];
                         const parentLatLng = (parentUnit && parentUnit.lat && parentUnit.lng) 
@@ -1772,7 +1765,6 @@
                         }
                     }
 
-                    // Path Segments
                     if (!unitSegments[key]) unitSegments[key] = [];
 
                     if (lastPositions[key]) {
@@ -1802,7 +1794,6 @@
                     }
                 }
 
-                // In-place individual roster card
                 let card = document.getElementById(`unit_card_${key}`);
                 if (!card) {
                     card = document.createElement("div");
@@ -1880,7 +1871,6 @@
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
         }
 
-        // --- 10. MANUAL PURGE DATABASE GHOSTS ---
         async function purgeDatabaseGhosts() {
             const choice = confirm("PURGE GHOST ENTRIES?\n\nClick [OK] to clean stale / duplicate entries.\n(To reset and wipe ALL entries including old casualties, hold Shift or use browser console).");
             if (!choice) return;
@@ -1912,7 +1902,6 @@
             }
         }
 
-        // --- 11. TACTICAL FOCUS CONTROLS ---
         function focusCommando(unitKey) {
             const unit = knownUnits[unitKey];
             if (!unit || typeof unit.lat !== 'number' || typeof unit.lng !== 'number') {
@@ -1966,7 +1955,6 @@
             }
         }
 
-        // --- 12. TACTICAL DISTRESS SIREN ---
         function playDistressSiren() {
             if (isSirenMuted || isSirenPlaying) return;
             try {
@@ -1983,4 +1971,256 @@
 
                 for (let i = 0; i < 5; i++) {
                     const step = i * 0.6;
-                    osc.frequency.setValueAtTime(8
+                    osc.frequency.setValueAtTime(850, t + step);
+                    osc.frequency.exponentialRampToValueAtTime(420, t + step + 0.3);
+                    osc.frequency.exponentialRampToValueAtTime(850, t + step + 0.6);
+                }
+
+                gain.gain.setValueAtTime(0.25, t);
+                gain.gain.setValueAtTime(0.25, t + 2.7);
+                gain.gain.linearRampToValueAtTime(0.001, t + 3.0);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t);
+                osc.stop(t + 3.0);
+
+                setTimeout(() => {
+                    isSirenPlaying = false;
+                    activeSirenOsc = null;
+                }, 3000);
+            } catch (e) {
+                isSirenPlaying = false;
+                activeSirenOsc = null;
+            }
+        }
+
+        function toggleSirenMute() {
+            isSirenMuted = !isSirenMuted;
+            const btn = document.getElementById("sirenMuteBtn");
+            if (isSirenMuted) {
+                btn.innerText = "🔕 SIREN: OFF";
+                btn.classList.add("active");
+                if (activeSirenOsc) {
+                    try { activeSirenOsc.stop(); } catch (e) {}
+                    activeSirenOsc = null;
+                }
+                isSirenPlaying = false;
+            } else {
+                btn.innerText = "🔔 SIREN: ON";
+                btn.classList.remove("active");
+            }
+        }
+
+        async function toggleAudioListen(unitKey) {
+            const player = document.getElementById("remoteAudioPlayer");
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            if (currentListeningUnit === unitKey) {
+                stopAudioMonitoring();
+                return;
+            }
+
+            stopAudioMonitoring();
+
+            currentListeningUnit = unitKey;
+            const btn = document.getElementById(`audioBtn_${unitKey}`);
+            if (btn) {
+                btn.classList.add("monitoring");
+                btn.innerText = "⏳ CONNECTING...";
+            }
+
+            try {
+                await database.ref(`webrtc/${unitKey}/m_candidates`).remove();
+                await database.ref(`webrtc/${unitKey}/answer`).remove();
+
+                const pc = new RTCPeerConnection(rtcConfig);
+                activePeerConnection = pc;
+
+                pc.addTransceiver('audio', { direction: 'recvonly' });
+
+                pc.ontrack = (event) => {
+                    const stream = (event.streams && event.streams[0]) 
+                        ? event.streams[0] 
+                        : new MediaStream([event.track]);
+
+                    player.srcObject = stream;
+                    player.muted = false;
+                    player.volume = 1.0;
+                    player.play().catch(e => console.warn("Autoplay warning:", e));
+
+                    try {
+                        if (audioSourceNode) audioSourceNode.disconnect();
+                        audioSourceNode = audioCtx.createMediaStreamSource(stream);
+                        audioSourceNode.connect(audioCtx.destination);
+                    } catch (err) {}
+
+                    if (btn) {
+                        btn.classList.add("monitoring");
+                        btn.innerText = "🔊 SPEAKER: ON (MUTE)";
+                    }
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+                        if (btn && currentListeningUnit === unitKey) {
+                            btn.innerText = "⚠️ RECONNECTING...";
+                        }
+                    }
+                };
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate && pc.signalingState !== "closed") {
+                        database.ref(`webrtc/${unitKey}/m_candidates`).push(event.candidate.toJSON());
+                    }
+                };
+
+                const offerSnap = await database.ref(`webrtc/${unitKey}/offer`).get();
+                const offer = offerSnap.val();
+                if (!offer) {
+                    alert("Audio stream not ready or commando offline.");
+                    stopAudioMonitoring();
+                    return;
+                }
+
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await database.ref(`webrtc/${unitKey}/answer`).set({ sdp: answer.sdp, type: answer.type });
+
+                candidatesListenerRef = database.ref(`webrtc/${unitKey}/c_candidates`);
+                candidatesListenerRef.on("child_added", async (snap) => {
+                    const candidate = snap.val();
+                    if (candidate && pc && pc.signalingState !== "closed" && pc.remoteDescription) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (err) {}
+                    }
+                });
+            } catch (err) {
+                alert("Failed to establish audio link: " + err.message);
+                stopAudioMonitoring();
+            }
+        }
+
+        function stopAudioMonitoring() {
+            if (candidatesListenerRef) {
+                candidatesListenerRef.off();
+                candidatesListenerRef = null;
+            }
+            if (audioSourceNode) {
+                try { audioSourceNode.disconnect(); } catch (e) {}
+                audioSourceNode = null;
+            }
+            if (activePeerConnection) {
+                activePeerConnection.close();
+                activePeerConnection = null;
+            }
+            const player = document.getElementById("remoteAudioPlayer");
+            if (player) {
+                player.srcObject = null;
+                player.pause();
+            }
+
+            if (currentListeningUnit) {
+                const btn = document.getElementById(`audioBtn_${currentListeningUnit}`);
+                if (btn) {
+                    btn.classList.remove("monitoring");
+                    btn.innerText = "🎙️ TURN SPEAKER ON (LISTEN)";
+                }
+                currentListeningUnit = null;
+            }
+        }
+
+        function setQuickMarker(type) {
+            if (activePlacementType === type) {
+                resetPlacementState();
+            } else {
+                resetPlacementState();
+                activePlacementType = type;
+                if (type === 'HOSTILE') document.getElementById("btnHostile").classList.add("active");
+                if (type === 'HAZARD') document.getElementById("btnIed").classList.add("active");
+                if (type === 'BREACH') document.getElementById("btnBreach").classList.add("active");
+            }
+        }
+
+        function resetPlacementState() {
+            activePlacementType = null;
+            document.getElementById("btnHostile").classList.remove("active");
+            document.getElementById("btnIed").classList.remove("active");
+            document.getElementById("btnBreach").classList.remove("active");
+        }
+
+        function placeSitRep(latlng, type) {
+            let label = "PIN";
+            let color = "#ef4444";
+            if (type === "HOSTILE") { label = "HOSTILE"; color = "#dc2626"; }
+            else if (type === "BREACH") { label = "BREACH"; color = "#16a34a"; }
+            else if (type === "HAZARD") { label = "IED / HAZARD"; color = "#d97706"; }
+
+            const pinIcon = L.divIcon({
+                html: `<div style="background:${color}; color:#fff; font-size:10px; font-weight:bold; padding:3px 6px; border-radius:4px; border:1px solid #fff; box-shadow:0 0 8px rgba(0,0,0,0.8);">${label}</div>`,
+                className: '',
+                iconSize: [80, 20]
+            });
+            const sitMarker = L.marker(latlng, { icon: pinIcon }).addTo(map)
+                .bindPopup(`<strong>${label}</strong><br>LAT: ${latlng.lat.toFixed(6)}<br>LNG: ${latlng.lng.toFixed(6)}`);
+            
+            situationMarkers.push(sitMarker);
+        }
+
+        map.on('contextmenu', (e) => {
+            const pinType = prompt("SELECT SITREP MARKER:\n1 = 🔴 Hostile / Terrorist\n2 = 🟢 Breach / Entry Point\n3 = ⚠️ IED / Hazard Zone", "1");
+            if (!pinType) return;
+
+            let type = "HOSTILE";
+            if (pinType === "1") type = "HOSTILE";
+            else if (pinType === "2") type = "BREACH";
+            else if (pinType === "3") type = "HAZARD";
+
+            placeSitRep(e.latlng, type);
+        });
+
+        function clearSitRepMarkers() {
+            situationMarkers.forEach(marker => map.removeLayer(marker));
+            situationMarkers.length = 0;
+        }
+
+        let measureActive = false;
+        let measurePoints = [];
+        let measureLine = null;
+
+        function toggleMeasureTool() {
+            resetPlacementState();
+            measureActive = !measureActive;
+            measurePoints = [];
+            if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+            document.getElementById("measureBtn").classList.toggle("active", measureActive);
+            document.getElementById("measureBtn").innerText = measureActive ? "📏 2 POINTS" : "📏 MEASURE";
+        }
+
+        map.on('click', (e) => {
+            if (activePlacementType) {
+                placeSitRep(e.latlng, activePlacementType);
+                resetPlacementState();
+                return;
+            }
+
+            if (!measureActive) return;
+            measurePoints.push(e.latlng);
+
+            if (measurePoints.length === 2) {
+                const dist = measurePoints[0].distanceTo(measurePoints[1]);
+                measureLine = L.polyline(measurePoints, { color: '#f59e0b', weight: 3, dashArray: '5, 5' }).addTo(map);
+                measureLine.bindPopup(`<strong>SEPARATION:</strong> ${dist.toFixed(1)} meters`).openPopup();
+                measureActive = false;
+                document.getElementById("measureBtn").classList.remove("active");
+                document.getElementById("measureBtn").innerText = "📏 MEASURE";
+            }
+        });
+    </script>
+</body>
+</html>
