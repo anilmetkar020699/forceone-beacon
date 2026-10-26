@@ -94,9 +94,7 @@
 
         /* Workspace Grid */
         .workspace { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
-        #tacticalMap { flex: 1; height: 100%; width: 100%; background: #0a0e17; }
-        .leaflet-tile-container { will-change: transform; backface-visibility: hidden; }
-        .leaflet-pane { transform: translate3d(0,0,0); }
+        #tacticalMap { flex: 1; height: 100%; width: 100%; background: #000; }
 
         /* Compass HUD */
         .tactical-compass-hud {
@@ -398,7 +396,6 @@
             <button id="btnBreach" class="btn-tool btn-breach" onclick="setQuickMarker('BREACH')">🟢 +BREACH</button>
             <button id="measureBtn" class="btn-tool" onclick="toggleMeasureTool()">📏 MEASURE</button>
             <button id="purgeBtn" class="btn-tool btn-purge" onclick="purgeDatabaseGhosts()">🧹 PURGE GHOSTS</button>
-            <button id="btnFollow" class="btn-tool" onclick="toggleFollowMode()">🎯 FOLLOW: OFF</button>
             <button id="sirenMuteBtn" class="btn-tool" onclick="toggleSirenMute()">🔔 SIREN: ON</button>
             <button class="btn-tool" onclick="clearSitRepMarkers()">🧹 CLEAR SITREPS</button>
             <button class="btn-tool btn-logout" onclick="logoutC2()">🔒 LOGOUT</button>
@@ -580,9 +577,8 @@
 
         // --- 2. MAP INITIALIZATION ---
         const map = L.map('tacticalMap', { 
+            maxZoom: 22,
             zoomControl: false,
-            maxZoom: 19,
-            minZoom: 3,
             rotate: true,
             bearing: 0,
             touchRotate: true,
@@ -597,41 +593,38 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Google Satellite & Hybrid Imagery Layer (Optimized with high buffer to eliminate mobile blinking/black screen flashes)
         const satelliteLayer = L.tileLayer(
-            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             {
                 minZoom: 1,
-                maxZoom: 19,
-                maxNativeZoom: 20,
-                detectRetina: true,
-                keepBuffer: 12,
+                maxZoom: 22,
+                maxNativeZoom: 17,
+                keepBuffer: 4,
                 updateWhenZooming: false,
-                updateWhenIdle: false,
-                attribution: 'Google Satellite'
+                updateWhenIdle: true,
+                attribution: 'Esri World Imagery'
             }
         );
 
         const satelliteLabelsLayer = L.tileLayer(
-            'https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}',
+            'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
             {
                 minZoom: 1,
-                maxZoom: 19,
-                maxNativeZoom: 20,
-                detectRetina: true,
+                maxZoom: 22,
+                maxNativeZoom: 17,
                 pane: 'overlayPane',
-                keepBuffer: 12,
+                keepBuffer: 4,
                 updateWhenZooming: false,
-                updateWhenIdle: false,
-                attribution: 'Google Labels'
+                updateWhenIdle: true,
+                attribution: 'Esri Reference Labels'
             }
         );
 
         satelliteLayer.on('tileerror', function (event) {
-            console.warn('Satellite tile failed to load:', event.tile && event.tile.src);
+            console.warn('Satellite imagery tile failed to load:', event.tile && event.tile.src);
         });
         satelliteLabelsLayer.on('tileerror', function (event) {
-            console.warn('Label tile failed to load:', event.tile && event.tile.src);
+            console.warn('Satellite label tile failed to load:', event.tile && event.tile.src);
         });
 
         const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer]);
@@ -652,7 +645,6 @@
         const situationMarkers = []; 
         let latestCasualtyLatLng = null;
 
-        // HIT MERGE / SQUAD FORMATION STATE
         const mergedHits = new Set();
         const squadMarkers = {};      
         const squadCircles = {};      
@@ -666,7 +658,6 @@
         const STALE_MS = 30000;          
         const GHOST_PURGE_MS = 120000;   
 
-        // WebRTC & Audio Settings
         const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
         let activePeerConnection = null;
         let currentListeningUnit = null;
@@ -765,7 +756,6 @@
             };
         }
 
-        // --- 4. MAP ROTATION & NORTH ARROW ENGINE ---
         function updateNorthCompass(deg) {
             const normalized = ((Math.round(deg) % 360) + 360) % 360;
             const needle = document.getElementById("northNeedle");
@@ -805,7 +795,6 @@
             }
         }
 
-        // --- 5. HIT MERGE / SQUAD FORMATION CONTROLS ---
         function openHitMergeModal() {
             document.getElementById("hitMergeModal").style.display = "flex";
             onModalGroupChange();
@@ -949,7 +938,6 @@
             });
         }
 
-        // --- 6. TACTICAL ORDER & MESSAGE DISPATCH CONTROLS ---
         function openCommsModal() {
             document.getElementById("commsModal").style.display = "flex";
             onCommsScopeChange();
@@ -1105,7 +1093,6 @@
                 });
         }
 
-        // --- 7. TOGGLE ROSTER & FILTER CONTROLS ---
         function toggleSidebar() {
             const sidebar = document.getElementById("sidebarPanel");
             const btn = document.getElementById("toggleRosterBtn");
@@ -1134,7 +1121,6 @@
             renderTelemetry();
         }
 
-        // --- 8. AUTHENTICATION & SESSION MANAGEMENT ---
         firebase.auth().onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById("authOverlay").style.display = "none";
@@ -1216,7 +1202,6 @@
             });
         }
 
-        // --- 9. TELEMETRY LISTENER & MAP ENGINE ---
         function startListeningTelemetry() {
             if (isListening) return;
             isListening = true;
@@ -1884,19 +1869,8 @@
             document.getElementById("staleCount").innerText = staleCount;
             document.getElementById("totalUnitsBadge").innerText = `${visibleEntitiesCount} ELEMENTS`;
             document.getElementById("casualtyNoticeBar").style.display = casualtyCount > 0 ? "flex" : "none";
-
-            
-            // Auto-follow logic if enabled
-            if (isFollowMode && followedUnitKey && knownUnits[followedUnitKey]) {
-                const u = knownUnits[followedUnitKey];
-                if (typeof u.lat === 'number' && typeof u.lng === 'number') {
-                    map.panTo([u.lat, u.lng], { animate: true, duration: 0.5 });
-                }
-            }
-
         }
 
-        // --- 10. MANUAL PURGE DATABASE GHOSTS ---
         async function purgeDatabaseGhosts() {
             const choice = confirm("PURGE GHOST ENTRIES?\n\nClick [OK] to clean stale / duplicate entries.\n(To reset and wipe ALL entries including old casualties, hold Shift or use browser console).");
             if (!choice) return;
@@ -1925,31 +1899,6 @@
                 renderTelemetry();
             } catch (err) {
                 alert("Purge failed: " + err.message);
-            }
-        }
-
-        // --- 11. TACTICAL FOCUS CONTROLS ---
-        
-        // --- FOLLOW LOCATION / GPS LOCK ENGINE ---
-        let isFollowMode = false;
-        let followedUnitKey = null;
-
-        function toggleFollowMode() {
-            isFollowMode = !isFollowMode;
-            const btn = document.getElementById("btnFollow");
-            if (btn) {
-                btn.classList.toggle("active", isFollowMode);
-                btn.innerText = isFollowMode ? "🎯 FOLLOW: ON" : "🎯 FOLLOW: OFF";
-            }
-            if (!isFollowMode) {
-                followedUnitKey = null;
-            } else {
-                // Find first online or casualty commando to follow
-                const keys = Object.keys(knownUnits);
-                if (keys.length > 0) {
-                    followedUnitKey = keys[0];
-                    focusCommando(followedUnitKey);
-                }
             }
         }
 
@@ -2006,7 +1955,6 @@
             }
         }
 
-        // --- 12. TACTICAL DISTRESS SIREN ---
         function playDistressSiren() {
             if (isSirenMuted || isSirenPlaying) return;
             try {
@@ -2065,7 +2013,6 @@
             }
         }
 
-        // --- 13. AUDIO INTERCEPT (WebRTC) ---
         async function toggleAudioListen(unitKey) {
             const player = document.getElementById("remoteAudioPlayer");
 
@@ -2188,7 +2135,6 @@
             }
         }
 
-        // --- 14. SITREP MARKERS ---
         function setQuickMarker(type) {
             if (activePlacementType === type) {
                 resetPlacementState();
@@ -2243,7 +2189,6 @@
             situationMarkers.length = 0;
         }
 
-        // --- 15. MEASUREMENT & MAP CLICKS ---
         let measureActive = false;
         let measurePoints = [];
         let measureLine = null;
