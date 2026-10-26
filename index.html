@@ -592,26 +592,46 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Satellite layer: keep native tile requests at the actual zoom level.
+        // Google Satellite & Hybrid Imagery Layer (Supports deep zoom up to 22 globally without gray tiles)
         const satelliteLayer = L.tileLayer(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
             {
                 minZoom: 1,
                 maxZoom: 22,
-                keepBuffer: 3,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                keepBuffer: 4,
                 updateWhenZooming: false,
                 updateWhenIdle: true,
-                attribution: 'Esri Satellite'
+                attribution: 'Google Satellite'
+            }
+        );
+
+        const satelliteLabelsLayer = L.tileLayer(
+            'https://{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}',
+            {
+                minZoom: 1,
+                maxZoom: 22,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                pane: 'overlayPane',
+                keepBuffer: 4,
+                updateWhenZooming: false,
+                updateWhenIdle: true,
+                attribution: 'Google Labels'
             }
         );
 
         satelliteLayer.on('tileerror', function (event) {
             console.warn('Satellite tile failed to load:', event.tile && event.tile.src);
         });
+        satelliteLabelsLayer.on('tileerror', function (event) {
+            console.warn('Label tile failed to load:', event.tile && event.tile.src);
+        });
+
+        const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer]);
 
         L.control.layers({
             "Dark Tactical Map": tacticalDarkLayer,
-            "Satellite Imagery": satelliteLayer
+            "Satellite Imagery + Labels": satelliteHybridLayer
         }, null, { position: 'topright' }).addTo(map);
 
         // --- 3. STORAGE & TRACKING STATE ---
