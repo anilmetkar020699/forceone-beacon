@@ -94,7 +94,9 @@
 
         /* Workspace Grid */
         .workspace { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
-        #tacticalMap { flex: 1; height: 100%; width: 100%; background: #000; }
+        #tacticalMap { flex: 1; height: 100%; width: 100%; background: #0a0e17; }
+        .leaflet-tile-container { will-change: transform; backface-visibility: hidden; }
+        .leaflet-pane { transform: translate3d(0,0,0); }
 
         /* Compass HUD */
         .tactical-compass-hud {
@@ -594,7 +596,7 @@
             attribution: 'Tactical Grid'
         }).addTo(map);
 
-        // Google Satellite & Hybrid Imagery Layer (Allows deep pinch-zoom up to 22 with seamless upscaling like Google Maps)
+        // Google Satellite & Hybrid Imagery Layer (Optimized with high buffer to eliminate mobile blinking/black screen flashes)
         const satelliteLayer = L.tileLayer(
             'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
             {
@@ -602,9 +604,9 @@
                 maxZoom: 22,
                 maxNativeZoom: 20,
                 detectRetina: true,
-                keepBuffer: 8,
+                keepBuffer: 12,
                 updateWhenZooming: false,
-                updateWhenIdle: true,
+                updateWhenIdle: false,
                 attribution: 'Google Satellite'
             }
         );
@@ -617,9 +619,9 @@
                 maxNativeZoom: 20,
                 detectRetina: true,
                 pane: 'overlayPane',
-                keepBuffer: 8,
+                keepBuffer: 12,
                 updateWhenZooming: false,
-                updateWhenIdle: true,
+                updateWhenIdle: false,
                 attribution: 'Google Labels'
             }
         );
