@@ -317,6 +317,17 @@
 
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3); }
 
+        /* Third map option: opens free Mapillary street-level imagery */
+        .street-view-control { background: transparent; border: 0; }
+        .street-view-control button {
+            display: block; padding: 8px 10px; border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px; background: #111827; color: #e2e8f0;
+            font: 700 12px monospace; cursor: pointer; box-shadow: 0 1px 5px rgba(0,0,0,0.45);
+            white-space: nowrap;
+        }
+        .street-view-control button:hover,
+        .street-view-control button:focus { background: #075985; color: #fff; outline: 2px solid #38bdf8; }
+
         @media (max-width: 768px) {
             header { padding: 6px 10px; }
             .op-title { font-size: 0.85rem; letter-spacing: 1.5px; }
@@ -628,9 +639,7 @@
             }
         );
 
-        // Road/transportation reference overlay. This adds road network labels
-        // and selected road details where Esri has coverage. It is a transparent
-        // reference layer, not another opaque basemap.
+        // Optional transparent road/transportation reference overlay.
         const satelliteRoadsLayer = L.tileLayer(
             'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
             {
@@ -650,26 +659,51 @@
             console.warn('Satellite imagery tile failed to load:', event.tile && event.tile.src);
         });
         satelliteLabelsLayer.on('tileerror', function (event) {
-            console.warn('Satellite place-label tile failed to load:', event.tile && event.tile.src);
+            console.warn('Satellite label tile failed to load:', event.tile && event.tile.src);
         });
         satelliteRoadsLayer.on('tileerror', function (event) {
             console.warn('Satellite road-reference tile failed to load:', event.tile && event.tile.src);
         });
 
-        // Keep satellite imagery and both transparent reference overlays in a
-        // single switchable option. Native imagery/reference detail is provider-
-        // limited; maxNativeZoom 17 avoids requesting unsupported higher zoom
-        // tiles, but the imagery will be enlarged (softer) above that level.
-        const satelliteHybridLayer = L.layerGroup([
-            satelliteLayer,
-            satelliteLabelsLayer,
-            satelliteRoadsLayer
-        ]);
+        // Treat imagery + transparent labels as one base-map option so the
+        // labels switch on/off with satellite mode and do not cover tactical mode.
+        const satelliteHybridLayer = L.layerGroup([satelliteLayer, satelliteLabelsLayer, satelliteRoadsLayer]);
 
         L.control.layers({
             "Dark Tactical Map": tacticalDarkLayer,
             "Satellite Imagery + Labels": satelliteHybridLayer
         }, null, { position: 'topright' }).addTo(map);
+
+        // Third option: open Mapillary's public web viewer at the current map center.
+        // This does not need a Mapillary API token because it opens the official viewer
+        // in a separate tab; coverage depends on community-uploaded imagery.
+        const StreetViewControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function () {
+                const container = L.DomUtil.create('div', 'leaflet-bar street-view-control');
+                const button = L.DomUtil.create('button', '', container);
+                button.type = 'button';
+                button.textContent = '🏙️ STREET VIEW';
+                button.title = 'Open Mapillary street-level imagery near the current map center';
+                button.setAttribute('aria-label', 'Open Mapillary street-level imagery');
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.on(button, 'click', function (event) {
+                    L.DomEvent.stop(event);
+                    const center = map.getCenter();
+                    const url = 'https://www.mapillary.com/app/?lat=' +
+                        encodeURIComponent(center.lat.toFixed(6)) +
+                        '&lng=' + encodeURIComponent(center.lng.toFixed(6)) + '&z=17';
+                    const opened = window.Open(url, '_blank');
+                    if (opened) opened.opener = null;
+                    if (!opened) {
+                        // Fallback for browsers that block new tabs.
+                        window.location.href = url;
+                    }
+                });
+                return container;
+            }
+        });
+        map.addControl(new StreetViewControl());
 
         // --- 3. STORAGE & TRACKING STATE ---
         const markers = {};          
