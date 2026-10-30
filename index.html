@@ -840,7 +840,7 @@
                 else if (normalized >= 158 && normalized < 203) dir = "S";
                 else if (normalized >= 203 && normalized < 248) dir = "SW";
                 else if (normalized >= 248 && normalized < 293) dir = "W";
-                else if (normalized >= 293 && normalized < 338) dir = "NW";
+                else if (normalized >= 293 &&Navigational directions...
                 label.innerText = `${normalized}° ${dir}`;
             }
         }
@@ -2121,20 +2121,20 @@
                 pc.addTransceiver('audio', { direction: 'recvonly' });
 
                 pc.ontrack = (event) => {
-                    // Play the incoming WebRTC stream through the audio element only.
-                    // Do not also connect the same stream to AudioContext, as that
-                    // sends the same audio to the speakers twice and creates an echo.
-                    const stream = (event.streams && event.streams[0])
-                        ? event.streams[0]
+                    const stream = (event.streams && event.streams[0]) 
+                        ? event.streams[0] 
                         : new MediaStream([event.track]);
 
-                    if (player.srcObject !== stream) {
-                        player.srcObject = stream;
-                    }
+                    player.srcObject = stream;
                     player.muted = false;
                     player.volume = 1.0;
-
                     player.play().catch(e => console.warn("Autoplay warning:", e));
+
+                    try {
+                        if (audioSourceNode) audioSourceNode.disconnect();
+                        audioSourceNode = audioCtx.createMediaStreamSource(stream);
+                        audioSourceNode.connect(audioCtx.destination);
+                    } catch (err) {}
 
                     if (btn) {
                         btn.classList.add("monitoring");
