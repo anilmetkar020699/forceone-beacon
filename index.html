@@ -2121,14 +2121,19 @@
                 pc.addTransceiver('audio', { direction: 'recvonly' });
 
                 pc.ontrack = (event) => {
-                    const stream = (event.streams && event.streams[0]) 
-                        ? event.streams[0] 
+                    // Play the incoming WebRTC stream through the audio element only.
+                    // Do not also connect the same stream to AudioContext, as that
+                    // sends the same audio to the speakers twice and creates an echo.
+                    const stream = (event.streams && event.streams[0])
+                        ? event.streams[0]
                         : new MediaStream([event.track]);
 
-                    // Output exclusively via HTML5 audio player to prevent duplicate Web Audio echo
-                    player.srcObject = stream;
+                    if (player.srcObject !== stream) {
+                        player.srcObject = stream;
+                    }
                     player.muted = false;
                     player.volume = 1.0;
+
                     player.play().catch(e => console.warn("Autoplay warning:", e));
 
                     if (btn) {
